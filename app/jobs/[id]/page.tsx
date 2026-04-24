@@ -193,6 +193,31 @@ export default function JobDetailPage() {
                 <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
                   施設からの返信をお待ちください
                 </div>
+                 <button
+            onClick={async () => {
+              const { data } = await supabase
+                .from('applications')
+                .select('id')
+                .eq('job_id', id)
+                .eq('nurse_id', userId)
+                .single()
+              if (data) router.push(`/chat/${data.id}`)
+            }}
+            style={{
+              width: '100%',
+              padding: '10px',
+              background: '#E07070',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              marginTop: '12px',
+            }}
+          >
+            💬 施設とチャットする
+          </button>
               </div>
             ) : (
               <button
