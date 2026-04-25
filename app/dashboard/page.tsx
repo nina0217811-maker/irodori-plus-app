@@ -27,12 +27,28 @@ export default function DashboardPage() {
     fetchData()
   }, [])
 
+  const handleSubscribe = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        facilityId: user.id,
+        facilityName,
+        email: user.email,
+      }),
+    })
+    const { url } = await res.json()
+    if (url) window.location.href = url
+  }
+
   const fetchData = async () => {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) { router.push('/login'); return }
     setUserId(userData.user.id)
 
-    // 施設情報取得
     const { data: facility } = await supabase
       .from('facilities')
       .select('facility_name')
@@ -40,7 +56,6 @@ export default function DashboardPage() {
       .single()
     if (facility) setFacilityName(facility.facility_name)
 
-    // 求人一覧取得
     const { data: jobData } = await supabase
       .from('jobs')
       .select(`*, applications (id)`)
@@ -95,16 +110,28 @@ export default function DashboardPage() {
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <div>
-          <div style={{ fontSize: '13px', opacity: 0.8 }}>現在のプラン</div>
-          <div style={{ fontSize: '20px', fontWeight: '700', marginTop: '4px' }}>スタンダード · ¥10,000/月</div>
-          <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>求人掲載: 無制限</div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{
+            background: '#10B981', color: '#fff',
+            padding: '4px 12px', borderRadius: '20px',
+            fontSize: '13px', fontWeight: '600',
+          }}>掲載中</span>
+          <button
+            onClick={handleSubscribe}
+            style={{
+              padding: '8px 16px',
+              background: '#fff',
+              color: '#C45A5A',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+            }}
+          >
+            💳 プランを購入
+          </button>
         </div>
-        <span style={{
-          background: '#10B981', color: '#fff',
-          padding: '4px 12px', borderRadius: '20px',
-          fontSize: '13px', fontWeight: '600',
-        }}>掲載中</span>
       </div>
 
       {/* 統計 */}

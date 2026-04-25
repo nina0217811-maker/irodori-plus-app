@@ -176,7 +176,7 @@ export default function PostJobPage() {
             fontSize: '16px', fontWeight: '700',
             cursor: loading ? 'not-allowed' : 'pointer',
           }}>
-          {loading ? '投稿中...' : '求人を投稿する（無料）'}
+          {loading ? '投稿中...' : '求人を投稿する'}
         </button>
         <div style={{ fontSize: '12px', color: '#64748B', textAlign: 'center', marginTop: '12px' }}>
           投稿後すぐに公開されます。月額プランに含まれます。
