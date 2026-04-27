@@ -58,7 +58,7 @@ export default function RegisterPage() {
       })
     }
 
-    router.push('/')
+    role === 'facility' ? router.push('/dashboard') : router.push('/mypage')
   }
 
   return (
