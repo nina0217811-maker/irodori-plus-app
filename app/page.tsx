@@ -22,13 +22,13 @@ export default function HomePage() {
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#1A2235' }}>
       <div style={{
-        background: 'linear-gradient(135deg, #6B2D2D 0%, #C45A5A 55%, #C0727A 100%)',
+        background: 'linear-gradient(135deg, #FECDD3 0%, #E9D5FF 50%, #BFDBFE 100%)',
         padding: '80px 20px 100px',
         textAlign: 'center',
-        color: '#fff',
+        color: '#3B2D6B',
       }}>
         <span style={{
-          background: 'rgba(255,255,255,0.2)', color: '#fff',
+          background: 'rgba(255,255,255,0.2)', color: "#3B2D6B",
           padding: '4px 14px', borderRadius: '20px',
           fontSize: '13px', fontWeight: '700',
           border: '1px solid rgba(255,255,255,0.3)',

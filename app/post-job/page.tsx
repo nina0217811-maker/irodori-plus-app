@@ -53,8 +53,19 @@ export default function PostJobPage() {
       status: 'open',
     })
 
-    if (!error) setDone(true)
-    else alert('投稿に失敗しました。もう一度お試しください。')
+   if (!error) {
+  // LINE通知
+  await fetch('/api/line-notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${form.facility_type}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+    }),
+  })
+  setDone(true)
+} else {
+  alert('投稿に失敗しました。もう一度お試しください。')
+}
     setLoading(false)
   }
 
