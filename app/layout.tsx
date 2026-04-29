@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'irodori＋ | 看護師×施設 単発マッチング',
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body style={{ margin: 0, background: '#FBF7F7', fontFamily: 'sans-serif' }}>
         <Navbar />
         {children}
+        <Footer />
       </body>
     </html>
   )
