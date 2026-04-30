@@ -70,7 +70,7 @@ export default function Navbar() {
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      height: '60px',
+      height: '70px',
     }}>
       <div style={{
         maxWidth: '1100px',
@@ -82,18 +82,9 @@ export default function Navbar() {
         gap: '20px',
       }}>
         {/* ロゴ */}
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '32px', height: '32px',
-            background: 'linear-gradient(135deg, #C45A5A, #C0727A)',
-            borderRadius: '8px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: '700', fontSize: '15px',
-          }}>i+</div>
-          <span style={{ fontWeight: '700', fontSize: '17px', letterSpacing: '-0.3px', color: '#1A2235' }}>
-            irodori<span style={{ color: '#E07070' }}>＋</span>
-          </span>
-        </Link>
+<Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+ <img src="/logo.jpg" alt="irodori+" style={{ height: '68px', width: 'auto' }} />
+</Link>
 
         <div style={{ flex: 1 }} />
 
