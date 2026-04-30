@@ -78,6 +78,34 @@ export default function JobDetailPage() {
       .insert({ job_id: id, nurse_id: userId })
 
     if (!error) {
+      // 施設のメールアドレスを取得してメール通知
+      const { data: facilityData } = await supabase
+        .from('facilities')
+        .select('email, facility_name')
+        .eq('id', job!.facilities.id)
+        .single()
+
+      if (facilityData) {
+        const { data: nurseData } = await supabase
+          .from('nurses')
+          .select('name')
+          .eq('id', userId)
+          .single()
+
+        await fetch('/api/notify-application', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            facilityEmail: facilityData.email,
+            facilityName: facilityData.facility_name,
+            workDate: job!.work_date,
+            timeFrom: job!.time_from,
+            timeTo: job!.time_to,
+            nurseName: nurseData?.name || '看護師',
+          }),
+        })
+      }
+
       setApplied(true)
       setMessage('応募しました！施設からの連絡をお待ちください。')
     } else {
@@ -101,7 +129,6 @@ export default function JobDetailPage() {
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
-      {/* 戻るボタン */}
       <button
         onClick={() => router.push('/jobs')}
         style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '16px' }}
@@ -111,7 +138,6 @@ export default function JobDetailPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
 
-        {/* メイン */}
         <div>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '16px' }}>
 
@@ -131,7 +157,6 @@ export default function JobDetailPage() {
               )}
             </div>
 
-            {/* 詳細情報 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#FBF7F7', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
               {[
                 ['📅 勤務日', job.work_date],
@@ -146,17 +171,11 @@ export default function JobDetailPage() {
               ))}
             </div>
 
-            {/* 業務内容 */}
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', marginBottom: '8px' }}>
-                業務内容
-              </div>
-              <p style={{ fontSize: '14px', lineHeight: '1.8', color: '#1A2235' }}>
-                {job.description}
-              </p>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', marginBottom: '8px' }}>業務内容</div>
+              <p style={{ fontSize: '14px', lineHeight: '1.8', color: '#1A2235' }}>{job.description}</p>
             </div>
 
-            {/* タグ */}
             {job.tags && job.tags.length > 0 && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {job.tags.map(tag => (
@@ -169,7 +188,6 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* サイドバー */}
         <div style={{ position: 'sticky', top: '80px' }}>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
 
@@ -190,50 +208,27 @@ export default function JobDetailPage() {
               <div style={{ textAlign: 'center', padding: '20px', background: '#FDF0F0', borderRadius: '10px' }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
                 <div style={{ fontWeight: '700', color: '#C45A5A' }}>応募済み</div>
-                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
-                  施設からの返信をお待ちください
-                </div>
-                 <button
-            onClick={async () => {
-              const { data } = await supabase
-                .from('applications')
-                .select('id')
-                .eq('job_id', id)
-                .eq('nurse_id', userId)
-                .single()
-              if (data) router.push(`/chat/${data.id}`)
-            }}
-            style={{
-              width: '100%',
-              padding: '10px',
-              background: '#E07070',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              marginTop: '12px',
-            }}
-          >
-            💬 施設とチャットする
-          </button>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>施設からの返信をお待ちください</div>
+                <button
+                  onClick={async () => {
+                    const { data } = await supabase
+                      .from('applications')
+                      .select('id')
+                      .eq('job_id', id)
+                      .eq('nurse_id', userId)
+                      .single()
+                    if (data) router.push(`/chat/${data.id}`)
+                  }}
+                  style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '12px' }}
+                >
+                  💬 施設とチャットする
+                </button>
               </div>
             ) : (
               <button
                 onClick={handleApply}
                 disabled={applying}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: applying ? '#ccc' : '#E07070',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  cursor: applying ? 'not-allowed' : 'pointer',
-                }}
+                style={{ width: '100%', padding: '14px', background: applying ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: applying ? 'not-allowed' : 'pointer' }}
               >
                 {applying ? '応募中...' : 'この求人に応募する'}
               </button>
