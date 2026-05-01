@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 type Application = {
   id: string
   nurse_id: string
-  profiles?: { name: string }
 }
 
 type Job = {
@@ -33,6 +32,7 @@ export default function DashboardPage() {
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [reviews, setReviews] = useState<{ nurse_id: string }[]>([])
+  const [nurseNames, setNurseNames] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     fetchData()
@@ -64,10 +64,26 @@ export default function DashboardPage() {
 
     const { data: jobData } = await supabase
       .from('jobs')
-      .select(`*, applications (id, nurse_id, profiles (name))`)
+      .select(`*, applications (id, nurse_id)`)
       .eq('facility_id', userData.user.id)
       .order('created_at', { ascending: false })
-    if (jobData) setJobs(jobData as any)
+    if (jobData) {
+      setJobs(jobData)
+
+      // 看護師IDを収集して名前を取得
+      const nurseIds = [...new Set(jobData.flatMap((j: any) => j.applications.map((a: any) => a.nurse_id)))]
+      if (nurseIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', nurseIds)
+        if (profiles) {
+          const nameMap: { [key: string]: string } = {}
+          profiles.forEach((p: any) => { nameMap[p.id] = p.name })
+          setNurseNames(nameMap)
+        }
+      }
+    }
 
     const { data: reviewData } = await supabase
       .from('reviews')
@@ -310,7 +326,7 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {job.applications.map(app => {
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id)
-                      const nurseName = app.profiles?.name || '看護師'
+                      const nurseName = nurseNames[app.nurse_id] || '看護師'
                       return (
                         <button
                           key={app.id}
