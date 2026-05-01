@@ -71,16 +71,16 @@ export default function DashboardPage() {
       setJobs(jobData)
 
       // 看護師IDを収集して名前を取得
-      const nurseIds = [...new Set(jobData.flatMap((j: any) => j.applications.map((a: any) => a.nurse_id)))]
-      if (nurseIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, name')
-          .in('id', nurseIds)
-        if (profiles) {
-          const nameMap: { [key: string]: string } = {}
-          profiles.forEach((p: any) => { nameMap[p.id] = p.name })
-          setNurseNames(nameMap)
+const { data: profiles } = await supabase
+  .from('nurse_profile')
+  .select('id, name')
+  .in('id', nurseIds)
+if (profiles) {
+  const nameMap: { [key: string]: string } = {}
+  profiles.forEach((p: any) => { nameMap[p.id] = p.name })
+  setNurseNames(nameMap)
+}
+}
         }
       }
     }
