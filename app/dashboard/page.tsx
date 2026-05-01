@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 type Application = {
   id: string
   nurse_id: string
-  nurses?: { name: string }
+  profiles?: { name: string }
 }
 
 type Job = {
@@ -64,10 +64,10 @@ export default function DashboardPage() {
 
     const { data: jobData } = await supabase
       .from('jobs')
-      .select(`*, applications (id, nurse_id)`)
+      .select(`*, applications (id, nurse_id, profiles (name))`)
       .eq('facility_id', userData.user.id)
       .order('created_at', { ascending: false })
-    if (jobData) setJobs(jobData)
+    if (jobData) setJobs(jobData as any)
 
     const { data: reviewData } = await supabase
       .from('reviews')
@@ -108,7 +108,6 @@ export default function DashboardPage() {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
-      {/* 評価モーダル */}
       {reviewModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
@@ -121,7 +120,6 @@ export default function DashboardPage() {
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>看護師を評価する</h2>
             <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{reviewModal.nurseName}</p>
 
-            {/* 星評価 */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', justifyContent: 'center' }}>
               {[1, 2, 3, 4, 5].map(s => (
                 <span
@@ -134,7 +132,6 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* コメント */}
             <textarea
               value={comment}
               onChange={e => setComment(e.target.value)}
@@ -176,7 +173,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ヘッダー */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
@@ -194,7 +190,6 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* プランステータス */}
       <div style={{
         background: 'linear-gradient(135deg, #6B2D2D, #C0727A)',
         borderRadius: '12px', padding: '20px', marginBottom: '20px',
@@ -219,7 +214,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 統計 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
         {[
           ['掲載中の求人', openJobs.length, '📋'],
@@ -238,7 +232,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* 求人一覧 */}
       <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '15px' }}>掲載中の求人</div>
 
       {loading ? (
@@ -311,20 +304,20 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 終了した求人の応募者に評価ボタン */}
               {job.status === 'closed' && job.applications?.length > 0 && (
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {job.applications.map(app => {
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id)
+                      const nurseName = app.profiles?.name || '看護師'
                       return (
                         <button
                           key={app.id}
                           onClick={() => !alreadyReviewed && setReviewModal({
                             jobId: job.id,
                             nurseId: app.nurse_id,
-                            nurseName: '看護師',
+                            nurseName,
                           })}
                           style={{
                             padding: '6px 14px',
@@ -335,7 +328,7 @@ export default function DashboardPage() {
                             cursor: alreadyReviewed ? 'default' : 'pointer',
                           }}
                         >
-                          {alreadyReviewed ? '⭐ 評価済み' : '⭐ 評価する'}
+                          {alreadyReviewed ? `⭐ ${nurseName} 評価済み` : `⭐ ${nurseName} を評価する`}
                         </button>
                       )
                     })}
