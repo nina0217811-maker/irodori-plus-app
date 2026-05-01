@@ -67,20 +67,20 @@ export default function DashboardPage() {
       .select(`*, applications (id, nurse_id)`)
       .eq('facility_id', userData.user.id)
       .order('created_at', { ascending: false })
+
     if (jobData) {
       setJobs(jobData)
 
-      // 看護師IDを収集して名前を取得
-const { data: profiles } = await supabase
-  .from('nurse_profile')
-  .select('id, name')
-  .in('id', nurseIds)
-if (profiles) {
-  const nameMap: { [key: string]: string } = {}
-  profiles.forEach((p: any) => { nameMap[p.id] = p.name })
-  setNurseNames(nameMap)
-}
-}
+      const nurseIds = [...new Set(jobData.flatMap((j: any) => j.applications.map((a: any) => a.nurse_id)))]
+      if (nurseIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('nurse_profile')
+          .select('id, name')
+          .in('id', nurseIds)
+        if (profiles) {
+          const nameMap: { [key: string]: string } = {}
+          profiles.forEach((p: any) => { nameMap[p.id] = p.name })
+          setNurseNames(nameMap)
         }
       }
     }
@@ -326,7 +326,7 @@ if (profiles) {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {job.applications.map(app => {
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id)
-                      const nurseName = nurseNames[app.nurse_id] || '看護師'
+                      const nurseName = nurseNames[app.nurse_id] || '読み込み中'
                       return (
                         <button
                           key={app.id}
