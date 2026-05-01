@@ -25,13 +25,13 @@ export default function LoginPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
+    const { data: facility } = await supabase
+      .from('facilities')
+      .select('id')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role === 'facility') {
+    if (facility) {
       router.push('/dashboard')
     } else {
       router.push('/mypage')
