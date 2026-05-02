@@ -18,8 +18,8 @@ export default function AdminDashboard() {
   async function fetchAll(){
     setLoading(true)
     const {data:nurseData}=await supabase.from("nurse_profiles").select("id,name")
-    const {data:facilityData}=await supabase.from("facilities").select("id,name,created_at,stripe_subscription_id")
-    const {data:jobData}=await supabase.from("jobs").select("id,title,created_at,facility_id,facilities(name),applications(id,status)")
+    const {data:facilityData}=await supabase.from("facilities").select("id,name,stripe_subscription_id")
+    const {data:jobData}=await supabase.from("jobs").select("id,title,facility_id,facilities(name),applications(id,status)")
     setNurses(nurseData||[])
     setFacilities(facilityData||[])
     const fm:Record<string,any>={}
