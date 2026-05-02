@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 type Application = {
   id: string
   nurse_id: string
+  status: string
 }
 
 type Job = {
@@ -31,7 +32,7 @@ export default function DashboardPage() {
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [reviews, setReviews] = useState<{ nurse_id: string }[]>([])
+  const [reviews, setReviews] = useState<{ nurse_id: string, job_id: string }[]>([])
   const [nurseNames, setNurseNames] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function DashboardPage() {
 
     const { data: jobData } = await supabase
       .from('jobs')
-      .select(`*, applications (id, nurse_id)`)
+      .select(`*, applications (id, nurse_id, status)`)
       .eq('facility_id', userData.user.id)
       .order('created_at', { ascending: false })
 
@@ -87,7 +88,7 @@ export default function DashboardPage() {
 
     const { data: reviewData } = await supabase
       .from('reviews')
-      .select('nurse_id')
+      .select('nurse_id, job_id')
       .eq('facility_id', userData.user.id)
     if (reviewData) setReviews(reviewData)
 
@@ -96,6 +97,14 @@ export default function DashboardPage() {
 
   const closeJob = async (jobId: string) => {
     await supabase.from('jobs').update({ status: 'closed' }).eq('id', jobId)
+    fetchData()
+  }
+
+  const acceptNurse = async (applicationId: string, nurseId: string) => {
+    await supabase
+      .from('applications')
+      .update({ status: 'accepted' })
+      .eq('id', applicationId)
     fetchData()
   }
 
@@ -110,6 +119,23 @@ export default function DashboardPage() {
       rating,
       comment,
     })
+
+    const { data: application } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('job_id', reviewModal.jobId)
+      .eq('nurse_id', reviewModal.nurseId)
+      .single()
+
+    if (application) {
+      const stars = '⭐'.repeat(rating)
+      const message = `${stars} 評価が届きました！\n評価：${rating} / 5${comment ? `\nコメント：${comment}` : ''}`
+      await supabase.from('messages').insert({
+        application_id: application.id,
+        sender_id: userId,
+        body: message,
+      })
+    }
 
     setReviewModal(null)
     setRating(0)
@@ -138,19 +164,15 @@ export default function DashboardPage() {
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', justifyContent: 'center' }}>
               {[1, 2, 3, 4, 5].map(s => (
-                <span
-                  key={s}
-                  onClick={() => setRating(s)}
-                  style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}
-                >
+                <span key={s} onClick={() => setRating(s)}
+                  style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}>
                   ⭐
                 </span>
               ))}
             </div>
 
             <textarea
-              value={comment}
-              onChange={e => setComment(e.target.value)}
+              value={comment} onChange={e => setComment(e.target.value)}
               placeholder="コメント（任意）"
               style={{
                 width: '100%', padding: '10px 12px',
@@ -168,12 +190,9 @@ export default function DashboardPage() {
                   border: '1.5px solid #E2E8F0', borderRadius: '8px',
                   fontSize: '14px', cursor: 'pointer', color: '#64748B',
                 }}
-              >
-                キャンセル
-              </button>
+              >キャンセル</button>
               <button
-                onClick={submitReview}
-                disabled={rating === 0 || submitting}
+                onClick={submitReview} disabled={rating === 0 || submitting}
                 style={{
                   flex: 1, padding: '10px',
                   background: rating === 0 ? '#ccc' : '#E07070',
@@ -181,9 +200,7 @@ export default function DashboardPage() {
                   fontSize: '14px', fontWeight: '700',
                   cursor: rating === 0 ? 'not-allowed' : 'pointer',
                 }}
-              >
-                {submitting ? '送信中...' : '評価する'}
-              </button>
+              >{submitting ? '送信中...' : '評価する'}</button>
             </div>
           </div>
         </div>
@@ -194,16 +211,11 @@ export default function DashboardPage() {
           <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
           <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
-        <button
-          onClick={() => router.push('/post-job')}
-          style={{
-            padding: '10px 20px', background: '#E07070', color: '#fff',
-            border: 'none', borderRadius: '8px', fontSize: '14px',
-            fontWeight: '700', cursor: 'pointer',
-          }}
-        >
-          ＋ 新規求人を投稿
-        </button>
+        <button onClick={() => router.push('/post-job')} style={{
+          padding: '10px 20px', background: '#E07070', color: '#fff',
+          border: 'none', borderRadius: '8px', fontSize: '14px',
+          fontWeight: '700', cursor: 'pointer',
+        }}>＋ 新規求人を投稿</button>
       </div>
 
       <div style={{
@@ -212,21 +224,11 @@ export default function DashboardPage() {
         color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{
-            background: '#10B981', color: '#fff',
-            padding: '4px 12px', borderRadius: '20px',
-            fontSize: '13px', fontWeight: '600',
-          }}>掲載中</span>
-          <button
-            onClick={handleSubscribe}
-            style={{
-              padding: '8px 16px', background: '#fff', color: '#C45A5A',
-              border: 'none', borderRadius: '8px', fontSize: '13px',
-              fontWeight: '700', cursor: 'pointer',
-            }}
-          >
-            💳 プランを購入
-          </button>
+          <span style={{ background: '#10B981', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>掲載中</span>
+          <button onClick={handleSubscribe} style={{
+            padding: '8px 16px', background: '#fff', color: '#C45A5A',
+            border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+          }}>💳 プランを購入</button>
         </div>
       </div>
 
@@ -238,8 +240,7 @@ export default function DashboardPage() {
         ].map(([l, v, ic]) => (
           <div key={String(l)} style={{
             background: '#fff', borderRadius: '12px', padding: '16px',
-            textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-            border: '1px solid #EDE0E0',
+            textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0',
           }}>
             <div style={{ fontSize: '22px', marginBottom: '6px' }}>{ic}</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: '#E07070' }}>{v}</div>
@@ -259,16 +260,11 @@ export default function DashboardPage() {
         }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
           <div style={{ fontWeight: '600', marginBottom: '8px' }}>まだ求人がありません</div>
-          <button
-            onClick={() => router.push('/post-job')}
-            style={{
-              padding: '10px 24px', background: '#E07070', color: '#fff',
-              border: 'none', borderRadius: '8px', fontSize: '14px',
-              fontWeight: '700', cursor: 'pointer', marginTop: '8px',
-            }}
-          >
-            最初の求人を投稿する
-          </button>
+          <button onClick={() => router.push('/post-job')} style={{
+            padding: '10px 24px', background: '#E07070', color: '#fff',
+            border: 'none', borderRadius: '8px', fontSize: '14px',
+            fontWeight: '700', cursor: 'pointer', marginTop: '8px',
+          }}>最初の求人を投稿する</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -277,7 +273,7 @@ export default function DashboardPage() {
               background: '#fff', borderRadius: '12px', padding: '18px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0',
             }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.status === 'closed' && job.applications?.length > 0 ? '12px' : '0' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '3px' }}>
                     {job.work_date} · {job.time_from}〜{job.time_to}
@@ -291,61 +287,67 @@ export default function DashboardPage() {
                   <span style={{
                     background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9',
                     color: job.status === 'open' ? '#065F46' : '#64748B',
-                    padding: '3px 10px', borderRadius: '20px',
-                    fontSize: '12px', fontWeight: '600',
-                  }}>
-                    {job.status === 'open' ? '掲載中' : '終了'}
-                  </span>
+                    padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
+                  }}>{job.status === 'open' ? '掲載中' : '終了'}</span>
 
                   <span style={{
                     background: '#FDF0F0', color: '#C45A5A',
-                    padding: '4px 12px', borderRadius: '20px',
-                    fontSize: '13px', fontWeight: '700',
-                  }}>
-                    応募 {job.applications?.length || 0}名
-                  </span>
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700',
+                  }}>応募 {job.applications?.length || 0}名</span>
 
                   {job.status === 'open' && (
-                    <button
-                      onClick={() => closeJob(job.id)}
-                      style={{
-                        padding: '6px 14px', background: 'none',
-                        border: '1.5px solid #EDE0E0', borderRadius: '8px',
-                        fontSize: '13px', cursor: 'pointer', color: '#64748B',
-                      }}
-                    >
-                      終了する
-                    </button>
+                    <button onClick={() => closeJob(job.id)} style={{
+                      padding: '6px 14px', background: 'none',
+                      border: '1.5px solid #EDE0E0', borderRadius: '8px',
+                      fontSize: '13px', cursor: 'pointer', color: '#64748B',
+                    }}>終了する</button>
                   )}
                 </div>
               </div>
 
-              {job.status === 'closed' && job.applications?.length > 0 && (
+              {job.applications?.length > 0 && (
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {job.applications.map(app => {
-                      const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id)
                       const nurseName = nurseNames[app.nurse_id] || '読み込み中'
+                      const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
+                      const isAccepted = app.status === 'accepted'
+
                       return (
-                        <button
-                          key={app.id}
-                          onClick={() => !alreadyReviewed && setReviewModal({
-                            jobId: job.id,
-                            nurseId: app.nurse_id,
-                            nurseName,
-                          })}
-                          style={{
-                            padding: '6px 14px',
-                            background: alreadyReviewed ? '#F1F5F9' : '#FDF0F0',
-                            color: alreadyReviewed ? '#64748B' : '#C45A5A',
-                            border: 'none', borderRadius: '8px',
-                            fontSize: '13px', fontWeight: '600',
-                            cursor: alreadyReviewed ? 'default' : 'pointer',
-                          }}
-                        >
-                          {alreadyReviewed ? `⭐ ${nurseName} 評価済み` : `⭐ ${nurseName} を評価する`}
-                        </button>
+                        <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          {!isAccepted && (
+                            <button
+                              onClick={() => acceptNurse(app.id, app.nurse_id)}
+                              style={{
+                                padding: '6px 14px',
+                                background: '#D1FAE5', color: '#065F46',
+                                border: 'none', borderRadius: '8px',
+                                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                              }}
+                            >✅ {nurseName} を採用する</button>
+                          )}
+
+                          {isAccepted && !alreadyReviewed && (
+                            <button
+                              onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
+                              style={{
+                                padding: '6px 14px',
+                                background: '#FDF0F0', color: '#C45A5A',
+                                border: 'none', borderRadius: '8px',
+                                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                              }}
+                            >⭐ {nurseName} を評価する</button>
+                          )}
+
+                          {isAccepted && alreadyReviewed && (
+                            <span style={{
+                              padding: '6px 14px',
+                              background: '#F1F5F9', color: '#64748B',
+                              borderRadius: '8px', fontSize: '13px', fontWeight: '600',
+                            }}>⭐ {nurseName} 評価済み</span>
+                          )}
+                        </div>
                       )
                     })}
                   </div>
