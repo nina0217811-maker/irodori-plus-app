@@ -17,7 +17,7 @@ export default function Navbar() {
       .from('facilities')
       .select('id')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
     setRole(facility ? 'facility' : 'nurse')
   }
 

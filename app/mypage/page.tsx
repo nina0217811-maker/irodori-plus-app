@@ -61,6 +61,8 @@ export default function MyPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const [userId, setUserId] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [avgRating, setAvgRating] = useState<number | null>(null)
+  const [reviewCount, setReviewCount] = useState(0)
 
   useEffect(() => {
     const init = async () => {
@@ -68,7 +70,6 @@ export default function MyPage() {
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      // プロフィール
       const { data: np } = await supabase
         .from('nurse_profiles')
         .select('name, license, experience_years, areas, skills')
@@ -76,7 +77,6 @@ export default function MyPage() {
         .maybeSingle()
       if (np) setProfile(np as Profile)
 
-      // 応募履歴
       const { data: apps } = await supabase
         .from('applications')
         .select('id, status, created_at, job_id')
@@ -108,7 +108,6 @@ export default function MyPage() {
         }))
       }
 
-      // お気に入り
       const { data: favs } = await supabase
         .from('favorites').select('job_id').eq('nurse_id', user.id)
 
@@ -123,6 +122,16 @@ export default function MyPage() {
           const fac = (fFacs ?? []).find((f: any) => f.user_id === j.facility_id)
           return { job_id: j.id, work_date: j.work_date, wage_amount: j.wage_amount, facility_name: fac?.facility_name ?? '—', facility_type: fac?.facility_type ?? '' }
         }))
+      }
+
+      const { data: reviewData } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('nurse_id', user.id)
+      if (reviewData && reviewData.length > 0) {
+        const avg = reviewData.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewData.length
+        setAvgRating(Math.round(avg * 10) / 10)
+        setReviewCount(reviewData.length)
       }
 
       setLoading(false)
@@ -163,6 +172,18 @@ export default function MyPage() {
               ))}
             </div>
           </div>
+
+          {reviewCount > 0 && (
+            <div style={{ textAlign: 'center', padding: '0 12px' }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.primary }}>
+                {'⭐'.repeat(Math.round(avgRating ?? 0))}
+              </div>
+              <div style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>
+                {avgRating} / 5（{reviewCount}件）
+              </div>
+            </div>
+          )}
+
           <button onClick={() => setTab('profile')} style={{ padding: '8px 16px', borderRadius: 8, border: `1.5px solid ${C.primary}`, background: 'transparent', color: C.primary, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             プロフィール編集
           </button>
@@ -281,7 +302,6 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
     const skillsArr = skills.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const expYears = parseInt(years) || 0
 
-    // 既存レコードがあるかチェック
     const { data: existing } = await supabase
       .from('nurse_profiles')
       .select('id')
@@ -290,14 +310,12 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
 
     let err = null
     if (existing) {
-      // 更新
       const { error: e } = await supabase
         .from('nurse_profiles')
         .update({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr })
         .eq('id', userId)
       err = e
     } else {
-      // 新規作成
       const { error: e } = await supabase
         .from('nurse_profiles')
         .insert({ id: userId, name, license, experience_years: expYears, areas: areasArr, skills: skillsArr })
