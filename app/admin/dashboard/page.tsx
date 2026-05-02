@@ -18,7 +18,7 @@ export default function AdminDashboard() {
   async function fetchAll(){
     setLoading(true)
     const {data:nurseData}=await supabase.from("nurse_profiles").select("id,name")
-    const {data:facilityData}=await supabase.from("facilities").select("id,name,stripe_subscription_id")
+    const {data:facilityData}=await supabase.from("facilities").select("id,facility_name,plan_status")
     const {data:jobData}=await supabase.from("jobs").select("id,title,facility_id,facilities(name),applications(id,status)")
     setNurses(nurseData||[])
     setFacilities(facilityData||[])
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
                 <div style={{color:"#888",fontSize:"13px",marginBottom:"16px"}}>登録施設数：<span style={{color:"#a78bfa",fontWeight:"700"}}>{facilities.length}</span> 施設</div>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr><th style={th}>施設名</th><th style={th}>登録日</th><th style={th}>課金状況</th></tr></thead>
-                  <tbody>{facilities.map((f,i)=><tr key={i}><td style={td}>{f.name||"-"}</td><td style={{...td,color:"#888"}}>{fmt(f.created_at)}</td><td style={td}><span style={{display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"12px",background:f.stripe_subscription_id?"#1e1b4b":"#1f1f1f",color:f.stripe_subscription_id?"#a78bfa":"#666"}}>{f.stripe_subscription_id?"課金中":"未課金"}</span></td></tr>)}</tbody>
+                  <tbody>{facilities.map((f,i)=><tr key={i}><td style={td}>{f.facility_name||"-"}</td><td style={{...td,color:"#888"}}>{fmt(f.created_at)}</td><td style={td}><span style={{display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"12px",background:f.plan_status?"#1e1b4b":"#1f1f1f",color:f.plan_status?"#a78bfa":"#666"}}>{f.plan_status?"課金中":"未課金"}</span></td></tr>)}</tbody>
                 </table>
               </div>
             )}
