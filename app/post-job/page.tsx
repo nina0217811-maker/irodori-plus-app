@@ -53,19 +53,18 @@ export default function PostJobPage() {
       status: 'open',
     })
 
-   if (!error) {
-  // LINE通知
-  await fetch('/api/line-notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${form.facility_type}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
-    }),
-  })
-  setDone(true)
-} else {
-  alert('投稿に失敗しました。もう一度お試しください。')
-}
+    if (!error) {
+      await fetch('/api/line-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${form.facility_type}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+        }),
+      })
+      setDone(true)
+    } else {
+      alert('投稿に失敗しました: ' + JSON.stringify(error))
+    }
     setLoading(false)
   }
 
@@ -104,14 +103,12 @@ export default function PostJobPage() {
         background: '#fff', borderRadius: '12px', padding: '28px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0',
       }}>
-        {/* 勤務日 */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>勤務日 *</label>
           <input type='date' required value={form.work_date} onChange={e => set('work_date', e.target.value)}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
         </div>
 
-        {/* 時間 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
           <div>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>開始時間 *</label>
@@ -125,14 +122,12 @@ export default function PostJobPage() {
           </div>
         </div>
 
-        {/* 日給 */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>日給（円・税込） *</label>
           <input type='number' required placeholder='25000' value={form.wage_amount} onChange={e => set('wage_amount', e.target.value)}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
         </div>
 
-        {/* 施設種別 */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>施設種別 *</label>
           <select required value={form.facility_type} onChange={e => set('facility_type', e.target.value)}
@@ -147,7 +142,6 @@ export default function PostJobPage() {
           </select>
         </div>
 
-        {/* 必要資格 */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>必要資格 *</label>
           <select required value={form.required_license} onChange={e => set('required_license', e.target.value)}
@@ -157,7 +151,6 @@ export default function PostJobPage() {
           </select>
         </div>
 
-        {/* 業務内容 */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>業務内容 *</label>
           <textarea required value={form.description} onChange={e => set('description', e.target.value)}
@@ -165,14 +158,12 @@ export default function PostJobPage() {
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', height: '100px', resize: 'vertical', boxSizing: 'border-box' }} />
         </div>
 
-        {/* タグ */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>タグ（スペース区切り）</label>
           <input type='text' placeholder='夜勤なし 駅徒歩3分 交通費支給' value={form.tags} onChange={e => set('tags', e.target.value)}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
         </div>
 
-        {/* 急募 */}
         <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input type='checkbox' id='urgent' checked={form.is_urgent} onChange={e => set('is_urgent', e.target.checked)}
             style={{ width: '16px', height: '16px', cursor: 'pointer' }} />

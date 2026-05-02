@@ -74,7 +74,7 @@ export default function DashboardPage() {
       const nurseIds = [...new Set(jobData.flatMap((j: any) => j.applications.map((a: any) => a.nurse_id)))]
       if (nurseIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('nurse_profile')
+          .from('nurse_profiles')
           .select('id, name')
           .in('id', nurseIds)
         if (profiles) {

@@ -12,28 +12,27 @@ export default function Navbar() {
   const [role, setRole] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  const fetchRole = async (userId: string) => {
+    const { data: facility } = await supabase
+      .from('facilities')
+      .select('id')
+      .eq('id', userId)
+      .single()
+    setRole(facility ? 'facility' : 'nurse')
+  }
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         setUser(data.user)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single()
-        if (profile) setRole(profile.role)
+        fetchRole(data.user.id)
       }
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-        if (profile) setRole(profile.role)
+        fetchRole(session.user.id)
       } else {
         setUser(null)
         setRole(null)
@@ -51,10 +50,10 @@ export default function Navbar() {
     router.push('/')
   }
 
- const nurseLinks = [
-  { label: '求人を探す', href: '/jobs' },
-  { label: 'マイページ', href: '/mypage' },
-]
+  const nurseLinks = [
+    { label: '求人を探す', href: '/jobs' },
+    { label: 'マイページ', href: '/mypage' },
+  ]
 
   const facilityLinks = [
     { label: '求人管理', href: '/dashboard' },
@@ -81,14 +80,12 @@ export default function Navbar() {
         alignItems: 'center',
         gap: '20px',
       }}>
-        {/* ロゴ */}
-<Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
- <img src="/logo.jpg" alt="irodori+" style={{ height: '68px', width: 'auto' }} />
-</Link>
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <img src="/logo.jpg" alt="irodori+" style={{ height: '68px', width: 'auto' }} />
+        </Link>
 
         <div style={{ flex: 1 }} />
 
-        {/* ナビリンク */}
         {links.map(l => (
           <Link key={l.href} href={l.href} style={{ textDecoration: 'none' }}>
             <span style={{
@@ -102,7 +99,6 @@ export default function Navbar() {
           </Link>
         ))}
 
-        {/* 未ログイン */}
         {!user ? (
           <div style={{ display: 'flex', gap: '8px' }}>
             <Link href="/login">
@@ -122,7 +118,6 @@ export default function Navbar() {
             </Link>
           </div>
         ) : (
-          /* ログイン済み */
           <div style={{ position: 'relative' }}>
             <div
               onClick={() => setMenuOpen(o => !o)}
