@@ -15,17 +15,7 @@ export async function POST(req: NextRequest) {
       customer_email: email,
       line_items: [
         {
-          price_data: {
-            currency: 'jpy',
-            product_data: {
-              name: 'irodori＋ 掲載プラン',
-              description: '看護師単発バイト求人の掲載（月額）',
-            },
-            unit_amount: 10000,
-            recurring: {
-              interval: 'month',
-            },
-          },
+          price: 'price_1TSeEmHSLOWxbHz4fHVfdUHh',
           quantity: 1,
         },
       ],
