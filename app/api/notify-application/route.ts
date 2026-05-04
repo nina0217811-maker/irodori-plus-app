@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const { facilityEmail, facilityName, workDate, timeFrom, timeTo, nurseName } = await req.json()
 
     await resend.emails.send({
-      from: 'irodori+ <onboarding@resend.dev>',
+      from: 'irodori+ <no-reply@irodori0305.jp>',
       to: facilityEmail,
       subject: '【irodori+】新しい応募がありました',
       html: `
