@@ -53,7 +53,12 @@ export default function DashboardPage() {
 
   const handleDeleteJob = async (jobId: string) => {
     if (!confirm("この求人を削除しますか？")) return
-    await supabase.from("messages").delete().eq("application_id", jobId)
+    const { data: apps } = await supabase.from("applications").select("id").eq("job_id", jobId)
+    if (apps) {
+      for (const app of apps) {
+        await supabase.from("messages").delete().eq("application_id", app.id)
+      }
+    }
     await supabase.from("applications").delete().eq("job_id", jobId)
     await supabase.from("favorites").delete().eq("job_id", jobId)
     await supabase.from("reviews").delete().eq("job_id", jobId)
