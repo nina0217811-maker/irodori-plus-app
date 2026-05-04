@@ -168,8 +168,6 @@ export default function PostJobPage() {
 
         <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{marginBottom:'12px'}}><label style={{display:'block',marginBottom:'4px',fontWeight:'600'}}>募集人数</label><input type='number' min='1' max='99' value={form.required_count} onChange={e => set('required_count', parseInt(e.target.value))} style={{width:'80px',padding:'8px',borderRadius:'8px',border:'1px solid #ddd'}} /><span style={{marginLeft:'8px'}}>名</span></div>
-            style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
-          <label htmlFor='urgent' style={{ fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>急募にする</label>
         </div>
 
         <button type='submit' disabled={loading}
