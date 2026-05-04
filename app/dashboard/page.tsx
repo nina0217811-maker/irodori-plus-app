@@ -53,6 +53,9 @@ export default function DashboardPage() {
 
   const handleDeleteJob = async (jobId: string) => {
     if (!confirm("この求人を削除しますか？")) return
+    await supabase.from("applications").delete().eq("job_id", jobId)
+    await supabase.from("favorites").delete().eq("job_id", jobId)
+    await supabase.from("reviews").delete().eq("job_id", jobId)
     await supabase.from("jobs").delete().eq("id", jobId)
     fetchData()
   }
