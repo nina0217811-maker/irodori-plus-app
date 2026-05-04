@@ -51,6 +51,12 @@ export default function DashboardPage() {
     if (url) window.location.href = url
   }
 
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm("この求人を削除しますか？")) return
+    await supabase.from("jobs").delete().eq("id", jobId)
+    fetchData()
+  }
+
   const fetchData = async () => {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) { router.push('/login'); return }
@@ -273,7 +279,7 @@ export default function DashboardPage() {
               background: '#fff', borderRadius: '12px', padding: '18px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0',
             }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}><button onClick={() => handleDeleteJob(job.id)} style={{marginLeft:'auto',padding:'4px 10px',background:'none',border:'1px solid #fca5a5',borderRadius:'6px',color:'#ef4444',fontSize:'12px',cursor:'pointer',flexShrink:0}}>削除</button>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '3px' }}>
                     {job.work_date} · {job.time_from}〜{job.time_to}
