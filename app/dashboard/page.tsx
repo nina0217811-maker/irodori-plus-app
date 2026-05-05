@@ -151,7 +151,7 @@ export default function DashboardPage() {
         body: message,
       })
     }
-
+await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseId: reviewModal.nurseId, rating, comment, facilityName }) })
     setReviewModal(null)
     setRating(0)
     setComment('')
