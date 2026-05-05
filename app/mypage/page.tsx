@@ -79,9 +79,9 @@ export default function MyPage() {
 
       const { data: apps } = await supabase
         .from('applications')
-        .select('id, status, created_at, job_id')
+        .select('id, status, applied_at, job_id')
         .eq('nurse_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('applied_at', { ascending: false })
 
       if (apps && apps.length > 0) {
         const jobIds = apps.map((a: any) => a.job_id)
