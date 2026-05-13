@@ -31,6 +31,7 @@ export default function JobDetailPage() {
   const [applied, setApplied] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
     fetchJob()
@@ -78,7 +79,6 @@ export default function JobDetailPage() {
       .insert({ job_id: id, nurse_id: userId })
 
     if (!error) {
-      // 施設のメールアドレスを取得してメール通知
       const { data: facilityData } = await supabase
         .from('facilities')
         .select('email, facility_name')
@@ -224,13 +224,46 @@ export default function JobDetailPage() {
                   💬 施設とチャットする
                 </button>
               </div>
+            ) : showConfirm ? (
+              <div style={{ background: '#FDF0F0', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#1A2235' }}>
+                  応募前に確認してください
+                </div>
+                {[
+                  `📅 勤務日：${job.work_date}`,
+                  `⏰ 時間：${job.time_from}〜${job.time_to}`,
+                  `📍 場所：${job.facilities?.address}`,
+                  `💰 日給：¥${job.wage_amount.toLocaleString()}`,
+                ].map(item => (
+                  <div key={item} style={{ fontSize: '13px', color: '#1A2235', padding: '4px 0', borderBottom: '1px solid #EDE0E0' }}>
+                    {item}
+                  </div>
+                ))}
+                <div style={{ marginTop: '12px', fontSize: '13px', color: '#991B1B', fontWeight: '600', marginBottom: '16px' }}>
+                  ⚠️ 応募後のキャンセルは施設に大きな迷惑をかけます。確実に勤務できる場合のみ応募してください。
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    style={{ flex: 1, padding: '10px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    戻る
+                  </button>
+                  <button
+                    onClick={() => { setShowConfirm(false); handleApply() }}
+                    disabled={applying}
+                    style={{ flex: 2, padding: '10px', background: applying ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: applying ? 'not-allowed' : 'pointer' }}
+                  >
+                    {applying ? '応募中...' : '確認しました・応募する'}
+                  </button>
+                </div>
+              </div>
             ) : (
               <button
-                onClick={handleApply}
-                disabled={applying}
-                style={{ width: '100%', padding: '14px', background: applying ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: applying ? 'not-allowed' : 'pointer' }}
+                onClick={() => setShowConfirm(true)}
+                style={{ width: '100%', padding: '14px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}
               >
-                {applying ? '応募中...' : 'この求人に応募する'}
+                この求人に応募する
               </button>
             )}
 
