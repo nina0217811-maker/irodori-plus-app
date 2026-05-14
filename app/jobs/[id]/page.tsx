@@ -32,6 +32,7 @@ export default function JobDetailPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const [agreedPolicy, setAgreedPolicy] = useState(false)
 
   useEffect(() => {
     fetchJob()
@@ -62,7 +63,6 @@ export default function JobDetailPage() {
       .select(`*, facilities (id, facility_name, address)`)
       .eq('id', id)
       .single()
-
     if (!error && data) setJob(data)
     setLoading(false)
   }
@@ -140,7 +140,6 @@ export default function JobDetailPage() {
 
         <div>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '16px' }}>
-
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>
@@ -190,7 +189,6 @@ export default function JobDetailPage() {
 
         <div style={{ position: 'sticky', top: '80px' }}>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ fontSize: '36px', fontWeight: '700', color: '#E07070' }}>
                 ¥{job.wage_amount.toLocaleString()}
@@ -239,20 +237,37 @@ export default function JobDetailPage() {
                     {item}
                   </div>
                 ))}
-                <div style={{ marginTop: '12px', fontSize: '13px', color: '#991B1B', fontWeight: '600', marginBottom: '16px' }}>
-                  ⚠️ 応募後のキャンセルは施設に大きな迷惑をかけます。確実に勤務できる場合のみ応募してください。
+
+                <div style={{ marginTop: '12px', background: '#FFF7ED', borderRadius: '8px', padding: '12px', marginBottom: '12px', fontSize: '12px', lineHeight: '1.8', color: '#1A2235' }}>
+                  <div style={{ fontWeight: '700', color: '#C45A5A', marginBottom: '6px' }}>【キャンセルポリシー】</div>
+                  <div>✅ 勤務24時間前までのキャンセルは無料</div>
+                  <div>⚠️ 勤務12時間前以降は直前キャンセルとして記録</div>
+                  <div>❌ 無断欠勤・連絡不履行はアカウント停止</div>
                 </div>
+
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
+                  <input
+                    type='checkbox'
+                    checked={agreedPolicy}
+                    onChange={e => setAgreedPolicy(e.target.checked)}
+                    style={{ marginTop: '2px', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: '12px', color: '#1A2235', lineHeight: '1.6' }}>
+                    キャンセルポリシーを確認し、確実に勤務できる場合のみ応募します
+                  </span>
+                </label>
+
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    onClick={() => setShowConfirm(false)}
+                    onClick={() => { setShowConfirm(false); setAgreedPolicy(false) }}
                     style={{ flex: 1, padding: '10px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
                   >
                     戻る
                   </button>
                   <button
                     onClick={() => { setShowConfirm(false); handleApply() }}
-                    disabled={applying}
-                    style={{ flex: 2, padding: '10px', background: applying ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: applying ? 'not-allowed' : 'pointer' }}
+                    disabled={applying || !agreedPolicy}
+                    style={{ flex: 2, padding: '10px', background: applying || !agreedPolicy ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}
                   >
                     {applying ? '応募中...' : '確認しました・応募する'}
                   </button>
@@ -266,12 +281,6 @@ export default function JobDetailPage() {
                 この求人に応募する
               </button>
             )}
-
-            <div style={{ marginTop: '16px', fontSize: '12px', color: '#64748B', lineHeight: '1.8' }}>
-              ✅ 手数料ゼロ<br />
-              ✅ 翌週振込保証<br />
-              ✅ キャンセル保険あり
-            </div>
           </div>
         </div>
       </div>
