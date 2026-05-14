@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [submitting, setSubmitting] = useState(false)
   const [reviews, setReviews] = useState<{ nurse_id: string, job_id: string }[]>([])
   const [nurseNames, setNurseNames] = useState<{ [key: string]: string }>({})
+  const [renotifying, setRenotifying] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -64,6 +65,19 @@ export default function DashboardPage() {
     await supabase.from("reviews").delete().eq("job_id", jobId)
     await supabase.from("jobs").delete().eq("id", jobId)
     fetchData()
+  }
+
+  const handleRenotify = async (job: Job) => {
+    setRenotifying(job.id)
+    await fetch('/api/line-notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `【再募集】キャンセルが出ました！\n📅 ${job.work_date}\n⏰ ${job.time_from}〜${job.time_to}\n🏥 ${job.facility_type}\n💰 日給 ¥${job.wage_amount?.toLocaleString()}\n\n急募！求人を見る👇\nhttps://irodori0305.jp/jobs`,
+      }),
+    })
+    setRenotifying(null)
+    alert('再募集通知を送りました！')
   }
 
   const fetchData = async () => {
@@ -151,7 +165,7 @@ export default function DashboardPage() {
         body: message,
       })
     }
-await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseId: reviewModal.nurseId, rating, comment, facilityName }) })
+    await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseId: reviewModal.nurseId, rating, comment, facilityName }) })
     setReviewModal(null)
     setRating(0)
     setComment('')
@@ -166,56 +180,33 @@ await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': '
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
       {reviewModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300,
-        }}>
-          <div style={{
-            background: '#fff', borderRadius: '16px', padding: '32px',
-            width: '100%', maxWidth: '400px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>看護師を評価する</h2>
             <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{reviewModal.nurseName}</p>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', justifyContent: 'center' }}>
               {[1, 2, 3, 4, 5].map(s => (
                 <span key={s} onClick={() => setRating(s)}
-                  style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}>
-                  ⭐
-                </span>
+                  style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}>⭐</span>
               ))}
             </div>
 
             <textarea
               value={comment} onChange={e => setComment(e.target.value)}
               placeholder="コメント（任意）"
-              style={{
-                width: '100%', padding: '10px 12px',
-                border: '1.5px solid #E2E8F0', borderRadius: '8px',
-                fontSize: '14px', height: '80px', resize: 'vertical',
-                boxSizing: 'border-box', marginBottom: '16px',
-              }}
+              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', height: '80px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }}
             />
 
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => { setReviewModal(null); setRating(0); setComment('') }}
-                style={{
-                  flex: 1, padding: '10px', background: 'none',
-                  border: '1.5px solid #E2E8F0', borderRadius: '8px',
-                  fontSize: '14px', cursor: 'pointer', color: '#64748B',
-                }}
-              >キャンセル</button>
-              <button
-                onClick={submitReview} disabled={rating === 0 || submitting}
-                style={{
-                  flex: 1, padding: '10px',
-                  background: rating === 0 ? '#ccc' : '#E07070',
-                  color: '#fff', border: 'none', borderRadius: '8px',
-                  fontSize: '14px', fontWeight: '700',
-                  cursor: rating === 0 ? 'not-allowed' : 'pointer',
-                }}
-              >{submitting ? '送信中...' : '評価する'}</button>
+              <button onClick={() => { setReviewModal(null); setRating(0); setComment('') }}
+                style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>
+                キャンセル
+              </button>
+              <button onClick={submitReview} disabled={rating === 0 || submitting}
+                style={{ flex: 1, padding: '10px', background: rating === 0 ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: rating === 0 ? 'not-allowed' : 'pointer' }}>
+                {submitting ? '送信中...' : '評価する'}
+              </button>
             </div>
           </div>
         </div>
@@ -226,24 +217,17 @@ await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': '
           <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
           <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
-        <button onClick={() => router.push('/post-job')} style={{
-          padding: '10px 20px', background: '#E07070', color: '#fff',
-          border: 'none', borderRadius: '8px', fontSize: '14px',
-          fontWeight: '700', cursor: 'pointer',
-        }}>＋ 新規求人を投稿</button>
+        <button onClick={() => router.push('/post-job')} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+          ＋ 新規求人を投稿
+        </button>
       </div>
 
-      <div style={{
-        background: 'linear-gradient(135deg, #6B2D2D, #C0727A)',
-        borderRadius: '12px', padding: '20px', marginBottom: '20px',
-        color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
+      <div style={{ background: 'linear-gradient(135deg, #6B2D2D, #C0727A)', borderRadius: '12px', padding: '20px', marginBottom: '20px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <span style={{ background: '#10B981', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>掲載中</span>
-          <button onClick={handleSubscribe} style={{
-            padding: '8px 16px', background: '#fff', color: '#C45A5A',
-            border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-          }}>💳 プランを購入</button>
+          <button onClick={handleSubscribe} style={{ padding: '8px 16px', background: '#fff', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+            💳 プランを購入
+          </button>
         </div>
       </div>
 
@@ -253,10 +237,7 @@ await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': '
           ['総応募者数', totalApplicants, '👩‍⚕️'],
           ['総求人数', jobs.length, '✅'],
         ].map(([l, v, ic]) => (
-          <div key={String(l)} style={{
-            background: '#fff', borderRadius: '12px', padding: '16px',
-            textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0',
-          }}>
+          <div key={String(l)} style={{ background: '#fff', borderRadius: '12px', padding: '16px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
             <div style={{ fontSize: '22px', marginBottom: '6px' }}>{ic}</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: '#E07070' }}>{v}</div>
             <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{l}</div>
@@ -269,26 +250,21 @@ await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': '
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>読み込み中...</div>
       ) : jobs.length === 0 ? (
-        <div style={{
-          textAlign: 'center', padding: '60px', background: '#fff',
-          borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B',
-        }}>
+        <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
           <div style={{ fontWeight: '600', marginBottom: '8px' }}>まだ求人がありません</div>
-          <button onClick={() => router.push('/post-job')} style={{
-            padding: '10px 24px', background: '#E07070', color: '#fff',
-            border: 'none', borderRadius: '8px', fontSize: '14px',
-            fontWeight: '700', cursor: 'pointer', marginTop: '8px',
-          }}>最初の求人を投稿する</button>
+          <button onClick={() => router.push('/post-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+            最初の求人を投稿する
+          </button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {jobs.map(job => (
-            <div key={job.id} style={{
-              background: '#fff', borderRadius: '12px', padding: '18px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0',
-            }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}><button onClick={() => handleDeleteJob(job.id)} style={{marginLeft:'auto',padding:'4px 10px',background:'none',border:'1px solid #fca5a5',borderRadius:'6px',color:'#ef4444',fontSize:'12px',cursor:'pointer',flexShrink:0}}>削除</button>
+            <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}>
+                <button onClick={() => handleDeleteJob(job.id)} style={{ marginLeft: 'auto', padding: '4px 10px', background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}>
+                  削除
+                </button>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '3px' }}>
                     {job.work_date} · {job.time_from}〜{job.time_to}
@@ -299,23 +275,26 @@ await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': '
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{
-                    background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9',
-                    color: job.status === 'open' ? '#065F46' : '#64748B',
-                    padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
-                  }}>{job.status === 'open' ? '掲載中' : '終了'}</span>
+                  <span style={{ background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9', color: job.status === 'open' ? '#065F46' : '#64748B', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+                    {job.status === 'open' ? '掲載中' : '終了'}
+                  </span>
 
-                  <span style={{
-                    background: '#FDF0F0', color: '#C45A5A',
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700',
-                  }}>応募 {job.applications?.length || 0}名</span>
+                  <span style={{ background: '#FDF0F0', color: '#C45A5A', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' }}>
+                    応募 {job.applications?.length || 0}名
+                  </span>
 
                   {job.status === 'open' && (
-                    <button onClick={() => closeJob(job.id)} style={{
-                      padding: '6px 14px', background: 'none',
-                      border: '1.5px solid #EDE0E0', borderRadius: '8px',
-                      fontSize: '13px', cursor: 'pointer', color: '#64748B',
-                    }}>終了する</button>
+                    <>
+                      <button onClick={() => closeJob(job.id)} style={{ padding: '6px 14px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', color: '#64748B' }}>
+                        終了する
+                      </button>
+                      <button
+                        onClick={() => handleRenotify(job)}
+                        disabled={renotifying === job.id}
+                        style={{ padding: '6px 14px', background: renotifying === job.id ? '#ccc' : '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '8px', fontSize: '13px', cursor: renotifying === job.id ? 'not-allowed' : 'pointer', color: '#C2410C', fontWeight: '600' }}>
+                        {renotifying === job.id ? '送信中...' : '📢 再募集通知'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -332,35 +311,21 @@ await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': '
                       return (
                         <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           {!isAccepted && (
-                            <button
-                              onClick={() => acceptNurse(app.id, app.nurse_id)}
-                              style={{
-                                padding: '6px 14px',
-                                background: '#D1FAE5', color: '#065F46',
-                                border: 'none', borderRadius: '8px',
-                                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                              }}
-                            >✅ {nurseName} を採用する</button>
+                            <button onClick={() => acceptNurse(app.id, app.nurse_id)}
+                              style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                              ✅ {nurseName} を採用する
+                            </button>
                           )}
-
                           {isAccepted && !alreadyReviewed && (
-                            <button
-                              onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
-                              style={{
-                                padding: '6px 14px',
-                                background: '#FDF0F0', color: '#C45A5A',
-                                border: 'none', borderRadius: '8px',
-                                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                              }}
-                            >⭐ {nurseName} を評価する</button>
+                            <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
+                              style={{ padding: '6px 14px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                              ⭐ {nurseName} を評価する
+                            </button>
                           )}
-
                           {isAccepted && alreadyReviewed && (
-                            <span style={{
-                              padding: '6px 14px',
-                              background: '#F1F5F9', color: '#64748B',
-                              borderRadius: '8px', fontSize: '13px', fontWeight: '600',
-                            }}>⭐ {nurseName} 評価済み</span>
+                            <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>
+                              ⭐ {nurseName} 評価済み
+                            </span>
                           )}
                         </div>
                       )
