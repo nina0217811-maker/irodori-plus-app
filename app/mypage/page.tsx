@@ -48,9 +48,10 @@ const C = {
 }
 
 const STATUS: Record<string, { label: string; bg: string; color: string }> = {
-  pending:  { label: '審査中',   bg: '#FEF3C7', color: '#92400E' },
-  accepted: { label: '採用確定', bg: '#D1FAE5', color: '#065F46' },
-  rejected: { label: '見送り',   bg: '#F1F5F9', color: C.sub },
+  pending:   { label: '審査中',   bg: '#FEF3C7', color: '#92400E' },
+  accepted:  { label: '採用確定', bg: '#D1FAE5', color: '#065F46' },
+  rejected:  { label: '見送り',   bg: '#F1F5F9', color: '#64748B' },
+  cancelled: { label: 'キャンセル済', bg: '#FEE2E2', color: '#991B1B' },
 }
 
 export default function MyPage() {
@@ -63,6 +64,7 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true)
   const [avgRating, setAvgRating] = useState<number | null>(null)
   const [reviewCount, setReviewCount] = useState(0)
+  const [cancelling, setCancelling] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -142,6 +144,43 @@ export default function MyPage() {
   const removeFav = async (jobId: string) => {
     await supabase.from('favorites').delete().eq('nurse_id', userId).eq('job_id', jobId)
     setFavorites(prev => prev.filter(f => f.job_id !== jobId))
+  }
+
+  const cancelApplication = async (app: Application) => {
+    if (!confirm('この応募をキャンセルしますか？キャンセル履歴が記録されます。')) return
+    setCancelling(app.id)
+
+    // 勤務日時との差を計算してキャンセル種別を判定
+    const workDateTime = new Date(`${app.job_work_date}T${app.job_time_from}`)
+    const now = new Date()
+    const diffHours = (workDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+    let cancelType = 'normal'
+    if (diffHours < 0) {
+      cancelType = 'absent' // 無断欠勤
+    } else if (diffHours < 12) {
+      cancelType = 'direct' // 直前キャンセル
+    }
+
+    // キャンセル履歴を記録
+    await supabase.from('cancel_history').insert({
+      nurse_id: userId,
+      job_id: app.job_id,
+      cancel_type: cancelType,
+      note: `${app.facility_name} / ${app.job_work_date} ${app.job_time_from}〜${app.job_time_to}`,
+    })
+
+    // 応募ステータスをキャンセルに更新
+    await supabase.from('applications').update({ status: 'cancelled' }).eq('id', app.id)
+
+    setApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: 'cancelled' } : a))
+    setCancelling(null)
+
+    if (cancelType === 'direct') {
+      alert('⚠️ 直前キャンセルとして記録されました。繰り返すとアカウントが停止される場合があります。')
+    } else if (cancelType === 'absent') {
+      alert('❌ 無断欠勤として記録されました。アカウントが停止される場合があります。')
+    }
   }
 
   if (loading) return (
@@ -234,6 +273,15 @@ export default function MyPage() {
                         <span style={{ background: st.bg, color: st.color, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{st.label}</span>
                         {app.status === 'accepted' && (
                           <Link href={`/chat/${app.id}`} style={{ fontSize: 13, color: C.primary, fontWeight: 600, textDecoration: 'none' }}>💬 チャットを開く →</Link>
+                        )}
+                        {(app.status === 'pending' || app.status === 'accepted') && (
+                          <button
+                            onClick={() => cancelApplication(app)}
+                            disabled={cancelling === app.id}
+                            style={{ padding: '4px 12px', background: 'none', border: `1px solid #fca5a5`, borderRadius: 6, color: '#ef4444', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                          >
+                            {cancelling === app.id ? 'キャンセル中...' : 'キャンセルする'}
+                          </button>
                         )}
                         <span style={{ fontSize: 11, color: C.sub }}>{app.created_at?.slice(0, 10)}</span>
                       </div>
