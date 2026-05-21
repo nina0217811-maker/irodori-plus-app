@@ -22,6 +22,19 @@ type Job = {
   applications: Application[]
 }
 
+type NurseProfile = {
+  name: string
+  license: string
+  experience_years: number
+  areas: string[]
+  skills: string[]
+  age?: number
+  gender?: string
+  avg_rating?: number
+  review_count?: number
+  direct_cancel_count?: number
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
@@ -35,6 +48,7 @@ export default function DashboardPage() {
   const [reviews, setReviews] = useState<{ nurse_id: string, job_id: string }[]>([])
   const [nurseNames, setNurseNames] = useState<{ [key: string]: string }>({})
   const [renotifying, setRenotifying] = useState<string | null>(null)
+  const [profileModal, setProfileModal] = useState<NurseProfile | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -80,6 +94,37 @@ export default function DashboardPage() {
     alert('再募集通知を送りました！')
   }
 
+  const handleViewProfile = async (nurseId: string) => {
+    const { data: np } = await supabase
+      .from('nurse_profiles')
+      .select('name, license, experience_years, areas, skills, age, gender')
+      .eq('id', nurseId)
+      .single()
+
+    const { data: reviewData } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('nurse_id', nurseId)
+
+    const { data: cancelData } = await supabase
+      .from('cancel_history')
+      .select('cancel_type')
+      .eq('nurse_id', nurseId)
+
+    const avgRating = reviewData && reviewData.length > 0
+      ? Math.round(reviewData.reduce((s: number, r: any) => s + r.rating, 0) / reviewData.length * 10) / 10
+      : undefined
+
+    const directCancelCount = (cancelData ?? []).filter((c: any) => c.cancel_type === 'direct' || c.cancel_type === 'absent').length
+
+    setProfileModal({
+      ...(np as NurseProfile),
+      avg_rating: avgRating,
+      review_count: reviewData?.length ?? 0,
+      direct_cancel_count: directCancelCount,
+    })
+  }
+
   const fetchData = async () => {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) { router.push('/login'); return }
@@ -100,13 +145,10 @@ export default function DashboardPage() {
 
     if (jobData) {
       setJobs(jobData)
-
       const nurseIds = [...new Set(jobData.flatMap((j: any) => j.applications.map((a: any) => a.nurse_id)))]
       if (nurseIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('nurse_profiles')
-          .select('id, name')
-          .in('id', nurseIds)
+          .from('nurse_profiles').select('id, name').in('id', nurseIds)
         if (profiles) {
           const nameMap: { [key: string]: string } = {}
           profiles.forEach((p: any) => { nameMap[p.id] = p.name })
@@ -116,9 +158,7 @@ export default function DashboardPage() {
     }
 
     const { data: reviewData } = await supabase
-      .from('reviews')
-      .select('nurse_id, job_id')
-      .eq('facility_id', userData.user.id)
+      .from('reviews').select('nurse_id, job_id').eq('facility_id', userData.user.id)
     if (reviewData) setReviews(reviewData)
 
     setLoading(false)
@@ -130,10 +170,7 @@ export default function DashboardPage() {
   }
 
   const acceptNurse = async (applicationId: string, nurseId: string) => {
-    await supabase
-      .from('applications')
-      .update({ status: 'accepted' })
-      .eq('id', applicationId)
+    await supabase.from('applications').update({ status: 'accepted' }).eq('id', applicationId)
     fetchData()
   }
 
@@ -150,19 +187,14 @@ export default function DashboardPage() {
     })
 
     const { data: application } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('job_id', reviewModal.jobId)
-      .eq('nurse_id', reviewModal.nurseId)
-      .single()
+      .from('applications').select('id')
+      .eq('job_id', reviewModal.jobId).eq('nurse_id', reviewModal.nurseId).single()
 
     if (application) {
       const stars = '⭐'.repeat(rating)
       const message = `${stars} 評価が届きました！\n評価：${rating} / 5${comment ? `\nコメント：${comment}` : ''}`
       await supabase.from('messages').insert({
-        application_id: application.id,
-        sender_id: userId,
-        body: message,
+        application_id: application.id, sender_id: userId, body: message,
       })
     }
     await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseId: reviewModal.nurseId, rating, comment, facilityName }) })
@@ -179,25 +211,91 @@ export default function DashboardPage() {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
+      {/* 看護師プロフィールモーダル */}
+      {profileModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>看護師プロフィール</h2>
+              <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 28, background: 'linear-gradient(135deg, #E07070, #C0727A)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>
+                {profileModal.name?.charAt(0) ?? '?'}
+              </div>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: '700' }}>{profileModal.name ?? '未設定'}</div>
+                <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                  {profileModal.license === 'rn' ? '正看護師' : '准看護師'}
+                  {profileModal.age ? ` · ${profileModal.age}歳` : ''}
+                  {profileModal.gender ? ` · ${profileModal.gender}` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {[
+                  ['経験年数', profileModal.experience_years ? `${profileModal.experience_years}年` : '未設定'],
+                  ['活動エリア', profileModal.areas?.join('・') || '未設定'],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '3px' }}>{label}</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {profileModal.skills?.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>スキル・経験</div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {profileModal.skills.map(s => (
+                    <span key={s} style={{ background: '#FDF0F0', color: '#C45A5A', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
+              <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: '#065F46' }}>
+                  {profileModal.avg_rating ? `⭐ ${profileModal.avg_rating}` : '—'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                  平均評価（{profileModal.review_count}件）
+                </div>
+              </div>
+              <div style={{ background: profileModal.direct_cancel_count && profileModal.direct_cancel_count > 0 ? '#FEF2F2' : '#F0FDF4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: profileModal.direct_cancel_count && profileModal.direct_cancel_count > 0 ? '#991B1B' : '#065F46' }}>
+                  {profileModal.direct_cancel_count ?? 0}回
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>直前キャンセル履歴</div>
+              </div>
+            </div>
+
+            <button onClick={() => setProfileModal(null)} style={{ width: '100%', padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '16px' }}>
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 評価モーダル */}
       {reviewModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>看護師を評価する</h2>
             <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{reviewModal.nurseName}</p>
-
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', justifyContent: 'center' }}>
               {[1, 2, 3, 4, 5].map(s => (
-                <span key={s} onClick={() => setRating(s)}
-                  style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}>⭐</span>
+                <span key={s} onClick={() => setRating(s)} style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}>⭐</span>
               ))}
             </div>
-
-            <textarea
-              value={comment} onChange={e => setComment(e.target.value)}
-              placeholder="コメント（任意）"
-              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', height: '80px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }}
-            />
-
+            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="コメント（任意）"
+              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', height: '80px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }} />
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => { setReviewModal(null); setRating(0); setComment('') }}
                 style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>
@@ -266,31 +364,22 @@ export default function DashboardPage() {
                   削除
                 </button>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '3px' }}>
-                    {job.work_date} · {job.time_from}〜{job.time_to}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#64748B' }}>
-                    日給 ¥{job.wage_amount?.toLocaleString()} · {job.facility_type}
-                  </div>
+                  <div style={{ fontWeight: '600', marginBottom: '3px' }}>{job.work_date} · {job.time_from}〜{job.time_to}</div>
+                  <div style={{ fontSize: '13px', color: '#64748B' }}>日給 ¥{job.wage_amount?.toLocaleString()} · {job.facility_type}</div>
                 </div>
-
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={{ background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9', color: job.status === 'open' ? '#065F46' : '#64748B', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
                     {job.status === 'open' ? '掲載中' : '終了'}
                   </span>
-
                   <span style={{ background: '#FDF0F0', color: '#C45A5A', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' }}>
                     応募 {job.applications?.length || 0}名
                   </span>
-
                   {job.status === 'open' && (
                     <>
                       <button onClick={() => closeJob(job.id)} style={{ padding: '6px 14px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', color: '#64748B' }}>
                         終了する
                       </button>
-                      <button
-                        onClick={() => handleRenotify(job)}
-                        disabled={renotifying === job.id}
+                      <button onClick={() => handleRenotify(job)} disabled={renotifying === job.id}
                         style={{ padding: '6px 14px', background: renotifying === job.id ? '#ccc' : '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '8px', fontSize: '13px', cursor: renotifying === job.id ? 'not-allowed' : 'pointer', color: '#C2410C', fontWeight: '600' }}>
                         {renotifying === job.id ? '送信中...' : '📢 再募集通知'}
                       </button>
@@ -310,21 +399,25 @@ export default function DashboardPage() {
 
                       return (
                         <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button onClick={() => handleViewProfile(app.nurse_id)}
+                            style={{ padding: '6px 14px', background: '#F1F5F9', color: '#1A2235', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                            👤 {nurseName}
+                          </button>
                           {!isAccepted && (
                             <button onClick={() => acceptNurse(app.id, app.nurse_id)}
                               style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                              ✅ {nurseName} を採用する
+                              ✅ 採用する
                             </button>
                           )}
                           {isAccepted && !alreadyReviewed && (
                             <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
                               style={{ padding: '6px 14px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                              ⭐ {nurseName} を評価する
+                              ⭐ 評価する
                             </button>
                           )}
                           {isAccepted && alreadyReviewed && (
                             <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>
-                              ⭐ {nurseName} 評価済み
+                              ⭐ 評価済み
                             </span>
                           )}
                         </div>
