@@ -259,6 +259,15 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {(!profileModal.direct_cancel_count || profileModal.direct_cancel_count === 0) && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #D1FAE5, #A7F3D0)', border: '1.5px solid #34D399', borderRadius: '20px', padding: '6px 16px' }}>
+                  <span style={{ fontSize: '14px' }}>✅</span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#065F46' }}>直前キャンセルなし</span>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
               <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '20px', fontWeight: '700', color: '#065F46' }}>
