@@ -11,6 +11,8 @@ type Profile = {
   experience_years: number
   areas: string[]
   skills: string[]
+  age?: number
+  gender?: string
 }
 
 type Application = {
@@ -48,9 +50,9 @@ const C = {
 }
 
 const STATUS: Record<string, { label: string; bg: string; color: string }> = {
-  pending:   { label: '審査中',   bg: '#FEF3C7', color: '#92400E' },
-  accepted:  { label: '採用確定', bg: '#D1FAE5', color: '#065F46' },
-  rejected:  { label: '見送り',   bg: '#F1F5F9', color: '#64748B' },
+  pending:   { label: '審査中',      bg: '#FEF3C7', color: '#92400E' },
+  accepted:  { label: '採用確定',    bg: '#D1FAE5', color: '#065F46' },
+  rejected:  { label: '見送り',      bg: '#F1F5F9', color: '#64748B' },
   cancelled: { label: 'キャンセル済', bg: '#FEE2E2', color: '#991B1B' },
 }
 
@@ -74,7 +76,7 @@ export default function MyPage() {
 
       const { data: np } = await supabase
         .from('nurse_profiles')
-        .select('name, license, experience_years, areas, skills')
+        .select('name, license, experience_years, areas, skills, age, gender')
         .eq('id', user.id)
         .maybeSingle()
       if (np) setProfile(np as Profile)
@@ -127,9 +129,7 @@ export default function MyPage() {
       }
 
       const { data: reviewData } = await supabase
-        .from('reviews')
-        .select('rating')
-        .eq('nurse_id', user.id)
+        .from('reviews').select('rating').eq('nurse_id', user.id)
       if (reviewData && reviewData.length > 0) {
         const avg = reviewData.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewData.length
         setAvgRating(Math.round(avg * 10) / 10)
@@ -150,19 +150,14 @@ export default function MyPage() {
     if (!confirm('この応募をキャンセルしますか？キャンセル履歴が記録されます。')) return
     setCancelling(app.id)
 
-    // 勤務日時との差を計算してキャンセル種別を判定
     const workDateTime = new Date(`${app.job_work_date}T${app.job_time_from}`)
     const now = new Date()
     const diffHours = (workDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
 
     let cancelType = 'normal'
-    if (diffHours < 0) {
-      cancelType = 'absent' // 無断欠勤
-    } else if (diffHours < 12) {
-      cancelType = 'direct' // 直前キャンセル
-    }
+    if (diffHours < 0) cancelType = 'absent'
+    else if (diffHours < 12) cancelType = 'direct'
 
-    // キャンセル履歴を記録
     await supabase.from('cancel_history').insert({
       nurse_id: userId,
       job_id: app.job_id,
@@ -170,9 +165,7 @@ export default function MyPage() {
       note: `${app.facility_name} / ${app.job_work_date} ${app.job_time_from}〜${app.job_time_to}`,
     })
 
-    // 応募ステータスをキャンセルに更新
     await supabase.from('applications').update({ status: 'cancelled' }).eq('id', app.id)
-
     setApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: 'cancelled' } : a))
     setCancelling(null)
 
@@ -193,7 +186,6 @@ export default function MyPage() {
     <div style={{ background: C.bg, minHeight: '100vh', paddingBottom: 60 }}>
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
 
-        {/* プロフィールヘッダー */}
         <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', marginBottom: 24, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ width: 64, height: 64, borderRadius: 32, background: `linear-gradient(135deg, ${C.primary}, ${C.teal})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700 }}>
             {profile?.name?.charAt(0) ?? '?'}
@@ -203,6 +195,8 @@ export default function MyPage() {
             <div style={{ fontSize: 13, color: C.sub, marginTop: 4 }}>
               {profile?.license === 'rn' ? '正看護師' : profile?.license === 'lpn' ? '准看護師' : '—'}
               {profile?.experience_years ? ` · 経験${profile.experience_years}年` : ''}
+              {profile?.age ? ` · ${profile.age}歳` : ''}
+              {profile?.gender ? ` · ${profile.gender}` : ''}
               {profile?.areas?.length ? ` · ${profile.areas.join('・')}` : ''}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
@@ -228,7 +222,6 @@ export default function MyPage() {
           </button>
         </div>
 
-        {/* サマリー */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
           {[
             { label: '応募中', value: applications.filter(a => a.status === 'pending').length, icon: '⏳' },
@@ -243,7 +236,6 @@ export default function MyPage() {
           ))}
         </div>
 
-        {/* タブ */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 24 }}>
           {(['apps', 'favs', 'profile'] as const).map((key, i) => {
             const labels = ['応募履歴', 'お気に入り', 'プロフィール']
@@ -255,7 +247,6 @@ export default function MyPage() {
           })}
         </div>
 
-        {/* 応募履歴 */}
         {tab === 'apps' && (
           applications.length === 0
             ? <Empty icon="📋" text="まだ応募した求人がありません" href="/jobs" linkLabel="求人を探す" />
@@ -291,7 +282,6 @@ export default function MyPage() {
               </div>
         )}
 
-        {/* お気に入り */}
         {tab === 'favs' && (
           favorites.length === 0
             ? <Empty icon="❤️" text="お気に入りした求人がありません" href="/jobs" linkLabel="求人を探す" />
@@ -312,7 +302,6 @@ export default function MyPage() {
               </div>
         )}
 
-        {/* プロフィール編集 */}
         {tab === 'profile' && (
           <ProfileForm userId={userId} initial={profile} onSaved={p => { setProfile(p); setTab('apps') }} />
         )}
@@ -326,8 +315,8 @@ function Empty({ icon, text, href, linkLabel }: { icon: string; text: string; hr
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px', color: C.sub }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>{icon}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 24 }}>{text}</div>
-      <Link href={href} style={{ display: 'inline-block', padding: '10px 24px', borderRadius: 8, background: C.primary, color: '#fff', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>{linkLabel}</Link>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#1A2235', marginBottom: 24 }}>{text}</div>
+      <Link href={href} style={{ display: 'inline-block', padding: '10px 24px', borderRadius: 8, background: '#E07070', color: '#fff', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>{linkLabel}</Link>
     </div>
   )
 }
@@ -336,6 +325,8 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
   const [name, setName] = useState(initial?.name ?? '')
   const [license, setLicense] = useState(initial?.license ?? 'rn')
   const [years, setYears] = useState(String(initial?.experience_years ?? ''))
+  const [age, setAge] = useState(String(initial?.age ?? ''))
+  const [gender, setGender] = useState(initial?.gender ?? '')
   const [areas, setAreas] = useState((initial?.areas ?? []).join('、'))
   const [skills, setSkills] = useState((initial?.skills ?? []).join('、'))
   const [saving, setSaving] = useState(false)
@@ -349,70 +340,78 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
     const areasArr = areas.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const skillsArr = skills.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const expYears = parseInt(years) || 0
+    const ageNum = parseInt(age) || null
 
     const { data: existing } = await supabase
-      .from('nurse_profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle()
+      .from('nurse_profiles').select('id').eq('id', userId).maybeSingle()
+
+    const payload = { name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum, gender: gender || null }
 
     let err = null
     if (existing) {
-      const { error: e } = await supabase
-        .from('nurse_profiles')
-        .update({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr })
-        .eq('id', userId)
+      const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', userId)
       err = e
     } else {
-      const { error: e } = await supabase
-        .from('nurse_profiles')
-        .insert({ id: userId, name, license, experience_years: expYears, areas: areasArr, skills: skillsArr })
+      const { error: e } = await supabase.from('nurse_profiles').insert({ id: userId, ...payload })
       err = e
     }
 
-    if (err) {
-      setError(err.message)
-      setSaving(false)
-      return
-    }
+    if (err) { setError(err.message); setSaving(false); return }
 
-    onSaved({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr })
+    onSaved({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum ?? undefined, gender: gender || undefined })
     setSaving(false)
     setDone(true)
     setTimeout(() => setDone(false), 2000)
   }
 
-  const inp = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, background: '#fff', fontFamily: 'inherit', outline: 'none' } as React.CSSProperties
+  const inp = { width: '100%', padding: '10px 12px', border: `1.5px solid #EDE0E0`, borderRadius: 8, fontSize: 14, color: '#1A2235', background: '#fff', fontFamily: 'inherit', outline: 'none' } as React.CSSProperties
 
   return (
-    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '28px 32px' }}>
+    <div style={{ background: '#FFFFFF', borderRadius: 16, border: `1px solid #EDE0E0`, padding: '28px 32px' }}>
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24 }}>プロフィール編集</h2>
 
       <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>氏名</label>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>氏名</label>
         <input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="田中 みなみ" />
       </div>
 
       <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>資格</label>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>資格</label>
         <select value={license} onChange={e => setLicense(e.target.value)} style={inp}>
           <option value="rn">正看護師</option>
           <option value="lpn">准看護師</option>
         </select>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>年齢</label>
+          <input type="number" value={age} onChange={e => setAge(e.target.value)} style={inp} placeholder="30" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>性別</label>
+          <select value={gender} onChange={e => setGender(e.target.value)} style={inp}>
+            <option value="">選択してください</option>
+            <option value="女性">女性</option>
+            <option value="男性">男性</option>
+            <option value="その他">その他</option>
+            <option value="回答しない">回答しない</option>
+          </select>
+        </div>
+      </div>
+
       <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>経験年数</label>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>経験年数</label>
         <input type="number" value={years} onChange={e => setYears(e.target.value)} style={inp} placeholder="8" />
       </div>
 
       <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>活動エリア（読点区切り）</label>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>活動エリア（読点区切り）</label>
         <input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="東京都、神奈川県" />
       </div>
 
       <div style={{ marginBottom: 28 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>スキル・経験（読点区切り）</label>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label>
         <input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" />
       </div>
 
@@ -422,7 +421,7 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
         </div>
       )}
 
-      <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? C.green : C.primary, color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', transition: 'background .2s' }}>
+      <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', transition: 'background .2s' }}>
         {saving ? '保存中...' : done ? '✅ 保存しました！' : '保存する'}
       </button>
     </div>
