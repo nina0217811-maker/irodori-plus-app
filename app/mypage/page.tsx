@@ -337,22 +337,30 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
     setSaving(true)
     setError('')
 
+    // userIdが未取得の場合は直接authから取得
+    let resolvedUserId = userId
+    if (!resolvedUserId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setError('ログイン情報が取得できませんでした。再ログインしてください。'); setSaving(false); return }
+      resolvedUserId = user.id
+    }
+
     const areasArr = areas.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const skillsArr = skills.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const expYears = parseInt(years) || 0
     const ageNum = parseInt(age) || null
 
     const { data: existing } = await supabase
-      .from('nurse_profiles').select('id').eq('id', userId).maybeSingle()
+      .from('nurse_profiles').select('id').eq('id', resolvedUserId).maybeSingle()
 
     const payload = { name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum, gender: gender || null }
 
     let err = null
     if (existing) {
-      const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', userId)
+      const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', resolvedUserId)
       err = e
     } else {
-      const { error: e } = await supabase.from('nurse_profiles').insert({ id: userId, ...payload })
+      const { error: e } = await supabase.from('nurse_profiles').insert({ id: resolvedUserId, ...payload })
       err = e
     }
 
