@@ -22,6 +22,7 @@ export default function PostJobPage() {
     is_urgent: false,
     tags: '',
     required_count: 1,
+    address: '',
   })
 
   useEffect(() => {
@@ -59,15 +60,24 @@ export default function PostJobPage() {
       is_urgent: form.is_urgent,
       tags: tagsArray,
       required_count: form.required_count,
+      address: form.address,
       status: 'open',
     })
 
     if (!error) {
+      const { data: facilityData } = await supabase
+        .from('facilities')
+        .select('facility_name, address')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      const facilityName = facilityData?.facility_name ?? ''
+
       await fetch('/api/line-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${form.facility_type}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${form.address}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
         }),
       })
       setDone(true)
@@ -176,6 +186,12 @@ export default function PostJobPage() {
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>日給（円・税込） *</label>
           <input type='number' required placeholder='25000' value={form.wage_amount} onChange={e => set('wage_amount', e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>勤務地 *</label>
+          <input type='text' required placeholder='例：沖縄県那覇市おもろまち1-1-1' value={form.address} onChange={e => set('address', e.target.value)}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
         </div>
 
