@@ -68,7 +68,7 @@ export default function PostJobPage() {
       const { data: facilityData } = await supabase
         .from('facilities')
         .select('facility_name, address')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle()
 
       const facilityName = facilityData?.facility_name ?? ''
