@@ -87,7 +87,7 @@ export default function JobDetailPage() {
 
       if (facilityData) {
         const { data: nurseData } = await supabase
-          .from('nurses')
+          .from('nurse_profiles')
           .select('name')
           .eq('id', userId)
           .single()
