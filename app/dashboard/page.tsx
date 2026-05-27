@@ -400,40 +400,45 @@ export default function DashboardPage() {
               {job.applications?.length > 0 && (
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {job.applications.map(app => {
-                      const nurseName = nurseNames[app.nurse_id] || '読み込み中'
+                      const nurseName = nurseNames[app.nurse_id] || '---'
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
                       const isAccepted = app.status === 'accepted'
 
                       return (
-                        <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div key={app.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isAccepted ? '#F0FDF4' : '#F8FAFC', borderRadius: '8px', padding: '8px 12px' }}>
                           <button onClick={() => handleViewProfile(app.nurse_id)}
-                            style={{ padding: '6px 14px', background: '#F1F5F9', color: '#1A2235', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                            style={{ padding: '4px 12px', background: '#fff', color: '#1A2235', border: '1px solid #EDE0E0', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', minWidth: '100px' }}>
                             👤 {nurseName}
                           </button>
-                          {!isAccepted && (
-                            <button onClick={() => acceptNurse(app.id, app.nurse_id)}
-                              style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                              ✅ 採用する
-                            </button>
-                          )}
-                          {isAccepted && (
-                            <a href={`/chat/${app.id}`} style={{ padding: '6px 14px', background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textDecoration: 'none' }}>
-                              💬 チャット
-                            </a>
-                          )}
-                          {isAccepted && !alreadyReviewed && (
-                            <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
-                              style={{ padding: '6px 14px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                              ⭐ 評価する
-                            </button>
-                          )}
-                          {isAccepted && alreadyReviewed && (
-                            <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>
-                              ⭐ 評価済み
-                            </span>
-                          )}
+                          <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '20px', fontWeight: '600', background: isAccepted ? '#D1FAE5' : '#FEF3C7', color: isAccepted ? '#065F46' : '#92400E' }}>
+                            {isAccepted ? '採用済み' : '審査中'}
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                            {!isAccepted && (
+                              <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)}
+                                style={{ padding: '4px 12px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                ✅ 採用する
+                              </button>
+                            )}
+                            {isAccepted && (
+                              <a href={`/chat/${app.id}`} style={{ padding: '4px 12px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '6px', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
+                                💬 チャット
+                              </a>
+                            )}
+                            {isAccepted && !alreadyReviewed && (
+                              <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
+                                style={{ padding: '4px 12px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                ⭐ 評価する
+                              </button>
+                            )}
+                            {isAccepted && alreadyReviewed && (
+                              <span style={{ padding: '4px 12px', background: '#F1F5F9', color: '#64748B', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                                ⭐ 評価済み
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )
                     })}
