@@ -52,6 +52,9 @@ export default function DashboardPage() {
   const [renotifying, setRenotifying] = useState<string | null>(null)
   const [profileModal, setProfileModal] = useState<NurseProfile | null>(null)
   const [reportModal, setReportModal] = useState<{ nurseId: string; nurseName: string } | null>(null)
+  const [editJobModal, setEditJobModal] = useState<Job | null>(null)
+  const [editJobForm, setEditJobForm] = useState({ work_date: '', time_from: '', time_to: '', wage_amount: '', address: '', facility_type: '', description: '' })
+  const [savingJob, setSavingJob] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetail, setReportDetail] = useState('')
   const [reporting, setReporting] = useState(false)
@@ -242,6 +245,85 @@ export default function DashboardPage() {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
+
+      {/* 求人編集モーダル */}
+      {editJobModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>求人を編集</h2>
+              <button onClick={() => setEditJobModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>勤務日</label>
+              <input type='date' value={editJobForm.work_date} onChange={e => setEditJobForm(f => ({ ...f, work_date: e.target.value }))}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>開始時間</label>
+                <input type='time' value={editJobForm.time_from} onChange={e => setEditJobForm(f => ({ ...f, time_from: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>終了時間</label>
+                <input type='time' value={editJobForm.time_to} onChange={e => setEditJobForm(f => ({ ...f, time_to: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+              </div>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>日給（円）</label>
+              <input type='number' value={editJobForm.wage_amount} onChange={e => setEditJobForm(f => ({ ...f, wage_amount: e.target.value }))}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>勤務地</label>
+              <input type='text' value={editJobForm.address} onChange={e => setEditJobForm(f => ({ ...f, address: e.target.value }))}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>施設種別</label>
+              <select value={editJobForm.facility_type} onChange={e => setEditJobForm(f => ({ ...f, facility_type: e.target.value }))}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' as const }}>
+                <option value=''>選択してください</option>
+                <option>病院</option><option>クリニック</option><option>介護老人保健施設</option>
+                <option>訪問看護</option><option>デイサービス</option><option>訪問入浴</option>
+                <option>グループホーム</option><option>特別養護老人ホーム</option><option>有料老人ホーム</option>
+                <option>障害者施設</option><option>保育園</option><option>その他</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>業務内容</label>
+              <textarea value={editJobForm.description} onChange={e => setEditJobForm(f => ({ ...f, description: e.target.value }))}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', height: '100px', resize: 'vertical', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setEditJobModal(null)}
+                style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>
+                キャンセル
+              </button>
+              <button onClick={async () => {
+                setSavingJob(true)
+                const { error } = await supabase.from('jobs').update({
+                  work_date: editJobForm.work_date,
+                  time_from: editJobForm.time_from,
+                  time_to: editJobForm.time_to,
+                  wage_amount: parseInt(editJobForm.wage_amount),
+                  address: editJobForm.address,
+                  facility_type: editJobForm.facility_type,
+                  description: editJobForm.description,
+                }).eq('id', editJobModal.id)
+                setSavingJob(false)
+                if (!error) { setEditJobModal(null); fetchData() }
+                else alert('保存に失敗しました: ' + error.message)
+              }} disabled={savingJob}
+                style={{ flex: 2, padding: '10px', background: savingJob ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                {savingJob ? '保存中...' : '保存する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 通報モーダル */}
       {reportModal && (
@@ -483,6 +565,20 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}>
                 <button onClick={() => handleDeleteJob(job.id)} style={{ marginLeft: 'auto', padding: '4px 10px', background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}>
                   削除
+                </button>
+                <button onClick={() => {
+                  setEditJobModal(job)
+                  setEditJobForm({
+                    work_date: job.work_date,
+                    time_from: job.time_from,
+                    time_to: job.time_to,
+                    wage_amount: String(job.wage_amount),
+                    address: (job as any).address ?? '',
+                    facility_type: job.facility_type,
+                    description: (job as any).description ?? '',
+                  })
+                }} style={{ padding: '4px 10px', background: 'none', border: '1px solid #93C5FD', borderRadius: '6px', color: '#3B82F6', fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}>
+                  編集
                 </button>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', marginBottom: '3px' }}>{job.work_date} · {job.time_from}〜{job.time_to}</div>
