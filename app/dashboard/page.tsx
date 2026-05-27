@@ -169,15 +169,8 @@ export default function DashboardPage() {
     fetchData()
   }
 
-  const acceptNurse = async (applicationId: string, nurseId: string, jobId: string) => {
+  const acceptNurse = async (applicationId: string, nurseId: string) => {
     await supabase.from('applications').update({ status: 'accepted' }).eq('id', applicationId)
-
-    await fetch('/api/notify-accepted', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nurseId, jobId, facilityId: userId }),
-    })
-
     fetchData()
   }
 
@@ -420,7 +413,7 @@ export default function DashboardPage() {
                             👤 {nurseName}
                           </button>
                           {!isAccepted && (
-                            <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)}
+                            <button onClick={() => acceptNurse(app.id, app.nurse_id)}
                               style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                               ✅ 採用する
                             </button>
