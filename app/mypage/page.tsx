@@ -167,13 +167,26 @@ export default function MyPage() {
 
     await supabase.from('applications').update({ status: 'cancelled' }).eq('id', app.id)
     setApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: 'cancelled' } : a))
-    setCancelling(null)
 
-    if (cancelType === 'direct') {
-      alert('⚠️ 直前キャンセルとして記録されました。繰り返すとアカウントが停止される場合があります。')
-    } else if (cancelType === 'absent') {
-      alert('❌ 無断欠勤として記録されました。アカウントが停止される場合があります。')
+    // 停止チェック
+    if (cancelType === 'absent') {
+      await supabase.from('nurse_profiles').update({ is_suspended: true }).eq('id', userId)
+      alert('❌ 無断欠勤として記録されました。アカウントが停止されました。')
+    } else if (cancelType === 'direct') {
+      const { data: cancelData } = await supabase
+        .from('cancel_history')
+        .select('id')
+        .eq('nurse_id', userId)
+        .in('cancel_type', ['direct', 'absent'])
+      if (cancelData && cancelData.length >= 3) {
+        await supabase.from('nurse_profiles').update({ is_suspended: true }).eq('id', userId)
+        alert('⚠️ 直前キャンセルが3回に達しました。アカウントが停止されました。')
+      } else {
+        alert('⚠️ 直前キャンセルとして記録されました。繰り返すとアカウントが停止される場合があります。')
+      }
     }
+
+    setCancelling(null)
   }
 
   if (loading) return (

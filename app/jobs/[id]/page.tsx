@@ -74,6 +74,18 @@ export default function JobDetailPage() {
     }
     setApplying(true)
 
+    // 停止チェック
+    const { data: nurseProfile } = await supabase
+      .from('nurse_profiles')
+      .select('is_suspended')
+      .eq('id', userId)
+      .maybeSingle()
+    if (nurseProfile?.is_suspended) {
+      alert('アカウントが停止されています。運営にお問い合わせください。')
+      setApplying(false)
+      return
+    }
+
     const { error } = await supabase
       .from('applications')
       .insert({ job_id: id, nurse_id: userId })
