@@ -85,26 +85,15 @@ export default function JobDetailPage() {
         .eq('id', job!.facilities.id)
         .single()
 
-      if (facilityData) {
-        const { data: nurseData } = await supabase
-          .from('nurse_profiles')
-          .select('name')
-          .eq('id', userId)
-          .single()
-
-        await fetch('/api/notify-application', {
+      await fetch('/api/notify-application', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            facilityEmail: facilityData.email,
-            facilityName: facilityData.facility_name,
-            workDate: job!.work_date,
-            timeFrom: job!.time_from,
-            timeTo: job!.time_to,
-            nurseName: nurseData?.name || '看護師',
+            facilityId: job!.facilities.id,
+            nurseId: userId,
+            jobId: id,
           }),
         })
-      }
 
       setApplied(true)
       setMessage('応募しました！施設からの連絡をお待ちください。')
