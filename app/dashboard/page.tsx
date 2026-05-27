@@ -49,11 +49,6 @@ export default function DashboardPage() {
   const [nurseNames, setNurseNames] = useState<{ [key: string]: string }>({})
   const [renotifying, setRenotifying] = useState<string | null>(null)
   const [profileModal, setProfileModal] = useState<NurseProfile | null>(null)
-  const [facilityEditModal, setFacilityEditModal] = useState(false)
-  const [editFacilityName, setEditFacilityName] = useState('')
-  const [editFacilityType, setEditFacilityType] = useState('')
-  const [editAddress, setEditAddress] = useState('')
-  const [savingFacility, setSavingFacility] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -82,9 +77,7 @@ export default function DashboardPage() {
     await supabase.from("applications").delete().eq("job_id", jobId)
     await supabase.from("favorites").delete().eq("job_id", jobId)
     await supabase.from("reviews").delete().eq("job_id", jobId)
-    await supabase.from("cancel_history").delete().eq("job_id", jobId)
-    const { error: deleteError } = await supabase.from("jobs").delete().eq("id", jobId)
-    if (deleteError) { alert("削除に失敗しました: " + deleteError.message); return }
+    await supabase.from("jobs").delete().eq("id", jobId)
     fetchData()
   }
 
@@ -139,15 +132,10 @@ export default function DashboardPage() {
 
     const { data: facility } = await supabase
       .from('facilities')
-      .select('facility_name, facility_type, address')
+      .select('facility_name')
       .eq('id', userData.user.id)
       .single()
-    if (facility) {
-      setFacilityName(facility.facility_name)
-      setEditFacilityName(facility.facility_name ?? '')
-      setEditFacilityType(facility.facility_type ?? '')
-      setEditAddress(facility.address ?? '')
-    }
+    if (facility) setFacilityName(facility.facility_name)
 
     const { data: jobData } = await supabase
       .from('jobs')
@@ -229,66 +217,6 @@ export default function DashboardPage() {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
-
-      {/* 施設情報編集モーダル */}
-      {facilityEditModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>施設情報を編集</h2>
-              <button onClick={() => setFacilityEditModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>施設名</label>
-              <input value={editFacilityName} onChange={e => setEditFacilityName(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>施設種別</label>
-              <select value={editFacilityType} onChange={e => setEditFacilityType(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}>
-                <option value=''>選択してください</option>
-                <option>病院</option>
-                <option>クリニック</option>
-                <option>介護老人保健施設</option>
-                <option>訪問看護</option>
-                <option>デイサービス</option>
-                <option>訪問入浴</option>
-                <option>グループホーム</option>
-                <option>特別養護老人ホーム</option>
-                <option>有料老人ホーム</option>
-                <option>障害者施設</option>
-                <option>保育園</option>
-                <option>その他</option>
-              </select>
-            </div>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>住所</label>
-              <input value={editAddress} onChange={e => setEditAddress(e.target.value)}
-                placeholder='例：沖縄県那覇市おもろまち1-1-1'
-                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-            <button onClick={async () => {
-              setSavingFacility(true)
-              const { error } = await supabase.from('facilities').update({
-                facility_name: editFacilityName,
-                facility_type: editFacilityType,
-                address: editAddress,
-              }).eq('id', userId)
-              if (!error) {
-                setFacilityName(editFacilityName)
-                setFacilityEditModal(false)
-              } else {
-                alert('保存に失敗しました: ' + error.message)
-              }
-              setSavingFacility(false)
-            }} disabled={savingFacility}
-              style={{ width: '100%', padding: '12px', background: savingFacility ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              {savingFacility ? '保存中...' : '保存する'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 看護師プロフィールモーダル */}
       {profileModal && (
@@ -401,10 +329,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-            <div style={{ fontSize: '13px', color: '#64748B' }}>{facilityName}</div>
-            <button onClick={() => setFacilityEditModal(true)} style={{ padding: '3px 10px', background: 'none', border: '1px solid #EDE0E0', borderRadius: '6px', fontSize: '12px', color: '#64748B', cursor: 'pointer' }}>編集</button>
-          </div>
+          <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
         <button onClick={() => router.push('/post-job')} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
           ＋ 新規求人を投稿
@@ -484,7 +409,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {job.applications.map(app => {
-                      const nurseName = nurseNames[app.nurse_id] || '---'
+                      const nurseName = nurseNames[app.nurse_id] || '読み込み中'
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
                       const isAccepted = app.status === 'accepted'
 
