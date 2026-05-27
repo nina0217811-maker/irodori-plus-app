@@ -77,9 +77,7 @@ export default function DashboardPage() {
     await supabase.from("applications").delete().eq("job_id", jobId)
     await supabase.from("favorites").delete().eq("job_id", jobId)
     await supabase.from("reviews").delete().eq("job_id", jobId)
-    await supabase.from("cancel_history").delete().eq("job_id", jobId)
-    const { error: deleteError } = await supabase.from("jobs").delete().eq("id", jobId)
-    if (deleteError) { alert("削除に失敗しました: " + deleteError.message); return }
+    await supabase.from("jobs").delete().eq("id", jobId)
     fetchData()
   }
 
