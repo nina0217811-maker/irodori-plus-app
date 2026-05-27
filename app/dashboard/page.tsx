@@ -425,6 +425,11 @@ export default function DashboardPage() {
                               ✅ 採用する
                             </button>
                           )}
+                          {isAccepted && (
+                            <a href={`/chat/${app.id}`} style={{ padding: '6px 14px', background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', textDecoration: 'none' }}>
+                              💬 チャット
+                            </a>
+                          )}
                           {isAccepted && !alreadyReviewed && (
                             <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })}
                               style={{ padding: '6px 14px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
