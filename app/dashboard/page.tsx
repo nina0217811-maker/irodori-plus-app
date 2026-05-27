@@ -19,6 +19,7 @@ type Job = {
   facility_type: string
   status: string
   is_urgent: boolean
+  required_count: number
   applications: Application[]
 }
 
@@ -169,8 +170,33 @@ export default function DashboardPage() {
     fetchData()
   }
 
-  const acceptNurse = async (applicationId: string, nurseId: string) => {
+  const acceptNurse = async (applicationId: string, nurseId: string, jobId: string) => {
     await supabase.from('applications').update({ status: 'accepted' }).eq('id', applicationId)
+
+    await fetch('/api/notify-accepted', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nurseId, jobId, facilityId: userId }),
+    })
+
+    const { data: jobData } = await supabase.from('jobs').select('required_count, applications(id, status, nurse_id)').eq('id', jobId).single()
+    if (jobData) {
+      const acceptedCount = (jobData.applications as any[]).filter((a: any) => a.id === applicationId || a.status === 'accepted').length
+      if (acceptedCount >= jobData.required_count) {
+        await supabase.from('jobs').update({ status: 'closed' }).eq('id', jobId)
+        const pendingNurseIds = (jobData.applications as any[])
+          .filter((a: any) => a.status === 'pending' && a.id !== applicationId)
+          .map((a: any) => a.nurse_id)
+        if (pendingNurseIds.length > 0) {
+          await fetch('/api/notify-rejected', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nurseIds: pendingNurseIds, facilityName, jobId }),
+          })
+        }
+      }
+    }
+
     fetchData()
   }
 
@@ -413,7 +439,7 @@ export default function DashboardPage() {
                             👤 {nurseName}
                           </button>
                           {!isAccepted && (
-                            <button onClick={() => acceptNurse(app.id, app.nurse_id)}
+                            <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)}
                               style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                               ✅ 採用する
                             </button>
