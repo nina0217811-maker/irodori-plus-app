@@ -345,6 +345,22 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {(() => {
+              const cancel = profileModal.direct_cancel_count ?? 0
+              const rating = profileModal.avg_rating ?? 0
+              const reviews = profileModal.review_count ?? 0
+              let rank = { label: '🔰 ブロンズ', bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' }
+              if (cancel >= 2) rank = { label: '⚠️ 要注意', bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5' }
+              else if (cancel === 0 && rating >= 4.0 && reviews >= 3) rank = { label: '🏅 ゴールド', bg: 'linear-gradient(135deg, #FEF9C3, #FDE68A)', color: '#92400E', border: '#F59E0B' }
+              else if (cancel <= 1 && rating >= 3.0) rank = { label: '⭐ シルバー', bg: '#F1F5F9', color: '#475569', border: '#94A3B8' }
+              return (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: rank.bg, border: `1.5px solid ${rank.border}`, borderRadius: '20px', padding: '6px 16px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: rank.color }}>信頼ランク：{rank.label}</span>
+                  </div>
+                </div>
+              )
+            })()}
             {(!profileModal.direct_cancel_count || profileModal.direct_cancel_count === 0) && (
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #D1FAE5, #A7F3D0)', border: '1.5px solid #34D399', borderRadius: '20px', padding: '6px 16px' }}>

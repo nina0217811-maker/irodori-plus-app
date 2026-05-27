@@ -230,9 +230,25 @@ export default function MyPage() {
             </div>
           )}
 
-          <button onClick={() => setTab('profile')} style={{ padding: '8px 16px', borderRadius: 8, border: `1.5px solid ${C.primary}`, background: 'transparent', color: C.primary, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-            プロフィール編集
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+            {(() => {
+              const cancel = 0
+              const rating = avgRating ?? 0
+              const reviews = reviewCount ?? 0
+              let rank = { label: '🔰 ブロンズ', bg: '#FEF3C7', color: '#92400E' }
+              if (cancel >= 2) rank = { label: '⚠️ 要注意', bg: '#FEE2E2', color: '#991B1B' }
+              else if (cancel === 0 && rating >= 4.0 && reviews >= 3) rank = { label: '🏅 ゴールド', bg: '#FEF9C3', color: '#92400E' }
+              else if (cancel <= 1 && rating >= 3.0) rank = { label: '⭐ シルバー', bg: '#F1F5F9', color: '#475569' }
+              return (
+                <div style={{ background: rank.bg, color: rank.color, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>
+                  信頼ランク：{rank.label}
+                </div>
+              )
+            })()}
+            <button onClick={() => setTab('profile')} style={{ padding: '8px 16px', borderRadius: 8, border: `1.5px solid ${C.primary}`, background: 'transparent', color: C.primary, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              プロフィール編集
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
