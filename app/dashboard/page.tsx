@@ -245,6 +245,12 @@ export default function DashboardPage() {
                 <option>クリニック</option>
                 <option>介護老人保健施設</option>
                 <option>訪問看護</option>
+                <option>デイサービス</option>
+                <option>訪問入浴</option>
+                <option>グループホーム</option>
+                <option>特別養護老人ホーム</option>
+                <option>有料老人ホーム</option>
+                <option>障害者施設</option>
                 <option>保育園</option>
                 <option>その他</option>
               </select>
