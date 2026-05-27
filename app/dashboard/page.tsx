@@ -24,6 +24,7 @@ type Job = {
 }
 
 type NurseProfile = {
+  nurseId: string
   name: string
   license: string
   experience_years: number
@@ -124,6 +125,7 @@ export default function DashboardPage() {
 
     setProfileModal({
       ...(np as NurseProfile),
+      nurseId,
       avg_rating: avgRating,
       review_count: reviewData?.length ?? 0,
       direct_cancel_count: directCancelCount,
