@@ -477,7 +477,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {job.applications.map(app => {
-                      const nurseName = nurseNames[app.nurse_id] || '読み込み中'
+                      const nurseName = nurseNames[app.nurse_id] || '---'
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
                       const isAccepted = app.status === 'accepted'
 
