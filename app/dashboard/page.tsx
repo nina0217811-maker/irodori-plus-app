@@ -50,6 +50,10 @@ export default function DashboardPage() {
   const [nurseNames, setNurseNames] = useState<{ [key: string]: string }>({})
   const [renotifying, setRenotifying] = useState<string | null>(null)
   const [profileModal, setProfileModal] = useState<NurseProfile | null>(null)
+  const [reportModal, setReportModal] = useState<{ nurseId: string; nurseName: string } | null>(null)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetail, setReportDetail] = useState('')
+  const [reporting, setReporting] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -237,6 +241,60 @@ export default function DashboardPage() {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
+      {/* 通報モーダル */}
+      {reportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#ef4444' }}>⚠️ 通報する</h2>
+              <button onClick={() => { setReportModal(null); setReportReason(''); setReportDetail('') }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{reportModal.nurseName} さんを通報します</p>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>通報理由 *</label>
+              <select value={reportReason} onChange={e => setReportReason(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' as const }}>
+                <option value=''>選択してください</option>
+                <option value='無断欠勤'>無断欠勤</option>
+                <option value='虚偽情報'>虚偽情報</option>
+                <option value='不適切な言動'>不適切な言動</option>
+                <option value='その他'>その他</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>詳細</label>
+              <textarea value={reportDetail} onChange={e => setReportDetail(e.target.value)}
+                placeholder='詳しい状況を記入してください'
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', height: '100px', resize: 'vertical', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setReportModal(null); setReportReason(''); setReportDetail('') }}
+                style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>
+                キャンセル
+              </button>
+              <button onClick={async () => {
+                if (!reportReason) { alert('通報理由を選択してください'); return }
+                setReporting(true)
+                await supabase.from('reports').insert({
+                  facility_id: userId,
+                  nurse_id: reportModal.nurseId,
+                  reason: reportReason,
+                  detail: reportDetail,
+                })
+                setReporting(false)
+                setReportModal(null)
+                setReportReason('')
+                setReportDetail('')
+                alert('通報を受け付けました。運営が確認します。')
+              }} disabled={!reportReason || reporting}
+                style={{ flex: 2, padding: '10px', background: !reportReason || reporting ? '#ccc' : '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !reportReason || reporting ? 'not-allowed' : 'pointer' }}>
+                {reporting ? '送信中...' : '通報する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 看護師プロフィールモーダル */}
       {profileModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -311,9 +369,19 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <button onClick={() => setProfileModal(null)} style={{ width: '100%', padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '16px' }}>
-              閉じる
-            </button>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button onClick={() => {
+                const name = profileModal.name ?? '不明'
+                const nurseId = profileModal.nurseId ?? ''
+                setProfileModal(null)
+                setReportModal({ nurseId, nurseName: name })
+              }} style={{ flex: 1, padding: '12px', background: 'none', border: '1.5px solid #ef4444', color: '#ef4444', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+                ⚠️ 通報
+              </button>
+              <button onClick={() => setProfileModal(null)} style={{ flex: 2, padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                閉じる
+              </button>
+            </div>
           </div>
         </div>
       )}
