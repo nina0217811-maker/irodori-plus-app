@@ -518,13 +518,18 @@ export default function DashboardPage() {
           <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
           <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button onClick={() => router.push('/post-job')} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
             ＋ 単発求人を投稿
           </button>
           <button onClick={() => router.push('/post-regular-job')} style={{ padding: '10px 20px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
             ＋ 常勤・パートを投稿
           </button>
+          {userId === '2f22fea3-4f1f-4fac-9053-1f8d4b14f523' && (
+            <button onClick={() => router.push('/admin/dashboard')} style={{ padding: '10px 20px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+              ⚙️ 管理画面
+            </button>
+          )}
         </div>
       </div>
 
