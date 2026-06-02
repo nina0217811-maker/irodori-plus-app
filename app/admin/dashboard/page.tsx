@@ -42,6 +42,7 @@ export default function AdminDashboard() {
     <div style={{minHeight:"100vh",background:"#0f0f0f",color:"#e5e5e5",fontFamily:"'Noto Sans JP',sans-serif"}}>
       <div style={{background:"#1a1a1a",borderBottom:"1px solid #2a2a2a",padding:"16px 32px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <span style={{color:"#a78bfa",fontWeight:"700",fontSize:"16px"}}>IRODORI+ 管理画面</span>
+        <button onClick={()=>router.push("/admin/features")} style={{background:"#E07070",border:"none",borderRadius:"6px",color:"#fff",padding:"6px 14px",cursor:"pointer",fontSize:"13px",fontWeight:"700"}}>📰 特集管理</button>
         <button onClick={()=>{sessionStorage.removeItem("admin_auth");router.push("/admin")}} style={{background:"none",border:"1px solid #2a2a2a",borderRadius:"6px",color:"#888",padding:"6px 14px",cursor:"pointer",fontSize:"13px"}}>ログアウト</button>
       </div>
       <div style={{display:"flex",gap:"4px",padding:"24px 32px 0"}}>
