@@ -61,6 +61,7 @@ export default function Navbar() {
   const facilityLinks = [
     { label: '求人管理', href: '/dashboard' },
     { label: '求人投稿', href: '/post-job' },
+    { label: '💬 チャット', href: '/chats' },
   ]
 
   const links = role === 'nurse' ? nurseLinks : role === 'facility' ? facilityLinks : []
