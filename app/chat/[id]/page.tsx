@@ -26,6 +26,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [otherName, setOtherName] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const sendingRef = useRef(false)
 
   useEffect(() => {
     fetchUser()
@@ -75,8 +76,11 @@ export default function ChatPage() {
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !userId || sending) return
+    if (!newMessage.trim() || !userId) return
+    if (sendingRef.current) return
+    sendingRef.current = true
     setSending(true)
+
     const body = newMessage.trim()
     setNewMessage('')
 
@@ -93,6 +97,7 @@ export default function ChatPage() {
     })
 
     setSending(false)
+    sendingRef.current = false
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
