@@ -518,9 +518,14 @@ export default function DashboardPage() {
           <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
           <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
-        <button onClick={() => router.push('/post-job')} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-          ＋ 新規求人を投稿
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => router.push('/post-job')} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+            ＋ 単発求人を投稿
+          </button>
+          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '10px 20px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+            ＋ 常勤・パートを投稿
+          </button>
+        </div>
       </div>
 
       <div style={{ background: 'linear-gradient(135deg, #6B2D2D, #C0727A)', borderRadius: '12px', padding: '20px', marginBottom: '20px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
