@@ -67,11 +67,18 @@ export default function ChatPage() {
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !userId) return
+    const body = newMessage.trim()
 
     await supabase.from('messages').insert({
       application_id: applicationId,
       sender_id: userId,
-      body: newMessage.trim(),
+      body,
+    })
+
+    await fetch('/api/notify-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId, senderId: userId, body }),
     })
 
     setNewMessage('')
