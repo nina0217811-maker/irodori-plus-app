@@ -19,7 +19,7 @@ export default function AdminDashboard() {
     setLoading(true)
     const {data:nurseData}=await supabase.from("nurse_profiles").select("id,name")
     const {data:facilityData}=await supabase.from("facilities").select("id,facility_name,plan_status")
-    const {data:jobData}=await supabase.from("jobs").select("id,title,facility_id,facilities(name),applications(id,status)")
+    const {data:jobData}=await supabase.from("jobs").select("id,title,facility_id,facilities(facility_name),applications(id,status)")
     setNurses(nurseData||[])
     setFacilities(facilityData||[])
     const fm:Record<string,any>={}
