@@ -22,6 +22,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [otherName, setOtherName] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,8 +51,22 @@ export default function ChatPage() {
 
   const fetchUser = async () => {
     const { data } = await supabase.auth.getUser()
-    if (data.user) setUserId(data.user.id)
-    else router.push('/login')
+    if (!data.user) { router.push('/login'); return }
+    setUserId(data.user.id)
+
+    const { data: app } = await supabase.from('applications').select('nurse_id, job_id').eq('id', applicationId).single()
+    if (!app) return
+
+    const { data: job } = await supabase.from('jobs').select('facility_id').eq('id', app.job_id).single()
+    const isFacility = data.user.id === job?.facility_id
+
+    if (isFacility) {
+      const { data: np } = await supabase.from('nurse_profiles').select('name').eq('id', app.nurse_id).maybeSingle()
+      setOtherName(np?.name ?? '看護師')
+    } else {
+      const { data: fac } = await supabase.from('facilities').select('facility_name').eq('id', job?.facility_id).maybeSingle()
+      setOtherName(fac?.facility_name ?? '施設')
+    }
   }
 
   const fetchMessages = async () => {
@@ -121,7 +136,7 @@ export default function ChatPage() {
           ←
         </button>
         <div>
-          <div style={{ fontWeight: '700', fontSize: '16px' }}>施設とのチャット</div>
+          <div style={{ fontWeight: '700', fontSize: '16px' }}>{otherName} とのチャット</div>
           <div style={{ fontSize: '12px', color: '#64748B' }}>メッセージで詳細を確認しましょう</div>
         </div>
       </div>
