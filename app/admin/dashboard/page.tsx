@@ -57,8 +57,28 @@ export default function AdminDashboard() {
               <div>
                 <div style={{color:"#888",fontSize:"13px",marginBottom:"16px"}}>登録看護師数：<span style={{color:"#a78bfa",fontWeight:"700"}}>{nurses.length}</span> 名</div>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead><tr><th style={th}>名前</th><th style={th}>登録日</th></tr></thead>
-                  <tbody>{nurses.map((n,i)=><tr key={i}><td style={td}>{n.name||"-"}</td><td style={{...td,color:"#888"}}>{fmt(n.created_at)}</td></tr>)}</tbody>
+                  <thead><tr><th style={th}>名前</th><th style={th}>登録日</th><th style={th}>停止</th><th style={th}>削除</th></tr></thead>
+                  <tbody>{nurses.map((n,i)=><tr key={i}>
+                    <td style={td}>{n.name||"-"}</td>
+                    <td style={{...td,color:"#888"}}>{fmt(n.created_at)}</td>
+                    <td style={td}>
+                      <button onClick={async()=>{
+                        if(!confirm((n.is_suspended?"停止解除":"停止")+"しますか？"))return
+                        await supabase.from("nurse_profiles").update({is_suspended:!n.is_suspended}).eq("id",n.id)
+                        fetchData()
+                      }} style={{padding:"3px 10px",borderRadius:"6px",border:"none",background:n.is_suspended?"#065F46":"#991B1B",color:"#fff",fontSize:"12px",cursor:"pointer"}}>
+                        {n.is_suspended?"解除":"停止"}
+                      </button>
+                    </td>
+                    <td style={td}>
+                      <button onClick={async()=>{
+                        if(!confirm("削除しますか？この操作は取り消せません"))return
+                        await supabase.from("nurse_profiles").delete().eq("id",n.id)
+                        await supabase.auth.admin.deleteUser(n.id)
+                        fetchData()
+                      }} style={{padding:"3px 10px",borderRadius:"6px",border:"1px solid #fca5a5",background:"none",color:"#ef4444",fontSize:"12px",cursor:"pointer"}}>削除</button>
+                    </td>
+                  </tr>)}</tbody>
                 </table>
               </div>
             )}
@@ -66,8 +86,28 @@ export default function AdminDashboard() {
               <div>
                 <div style={{color:"#888",fontSize:"13px",marginBottom:"16px"}}>登録施設数：<span style={{color:"#a78bfa",fontWeight:"700"}}>{facilities.length}</span> 施設</div>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead><tr><th style={th}>施設名</th><th style={th}>登録日</th><th style={th}>課金状況</th></tr></thead>
-                  <tbody>{facilities.map((f,i)=><tr key={i}><td style={td}>{f.facility_name||"-"}</td><td style={{...td,color:"#888"}}>{fmt(f.created_at)}</td><td style={td}><span style={{display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"12px",background:f.plan_status?"#1e1b4b":"#1f1f1f",color:f.plan_status?"#a78bfa":"#666"}}>{f.plan_status?"課金中":"未課金"}</span></td></tr>)}</tbody>
+                  <thead><tr><th style={th}>施設名</th><th style={th}>登録日</th><th style={th}>課金状況</th><th style={th}>求人停止</th><th style={th}>削除</th></tr></thead>
+                  <tbody>{facilities.map((f,i)=><tr key={i}>
+                    <td style={td}>{f.facility_name||"-"}</td>
+                    <td style={{...td,color:"#888"}}>{fmt(f.created_at)}</td>
+                    <td style={td}><span style={{display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"12px",background:f.plan_status?"#1e1b4b":"#1f1f1f",color:f.plan_status?"#a78bfa":"#666"}}>{f.plan_status?"課金中":"未課金"}</span></td>
+                    <td style={td}>
+                      <button onClick={async()=>{
+                        if(!confirm("この施設の全求人を強制停止しますか？"))return
+                        await supabase.from("jobs").update({status:"closed"}).eq("facility_id",f.id)
+                        alert("全求人を停止しました")
+                      }} style={{padding:"3px 10px",borderRadius:"6px",border:"1px solid #FCD34D",background:"none",color:"#F59E0B",fontSize:"12px",cursor:"pointer"}}>強制停止</button>
+                    </td>
+                    <td style={td}>
+                      <button onClick={async()=>{
+                        if(!confirm("この施設を削除しますか？この操作は取り消せません"))return
+                        await supabase.from("jobs").delete().eq("facility_id",f.id)
+                        await supabase.from("facilities").delete().eq("id",f.id)
+                        await supabase.auth.admin.deleteUser(f.id)
+                        fetchData()
+                      }} style={{padding:"3px 10px",borderRadius:"6px",border:"1px solid #fca5a5",background:"none",color:"#ef4444",fontSize:"12px",cursor:"pointer"}}>削除</button>
+                    </td>
+                  </tr>)}</tbody>
                 </table>
               </div>
             )}
