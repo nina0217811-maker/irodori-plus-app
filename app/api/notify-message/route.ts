@@ -11,12 +11,17 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { applicationId, senderId, body } = await req.json()
+    console.log('★ applicationId:', applicationId)
+    console.log('★ senderId:', senderId)
 
-    const { data: app } = await supabase
+    const { data: app, error: appError } = await supabase
       .from('applications')
       .select('nurse_id, job_id')
       .eq('id', applicationId)
       .single()
+
+    console.log('★ app:', JSON.stringify(app))
+    console.log('★ appError:', JSON.stringify(appError))
 
     if (!app) return NextResponse.json({ error: 'application not found' }, { status: 404 })
 
