@@ -53,6 +53,7 @@ export default function Navbar() {
   const nurseLinks = [
     { label: '単発求人', href: '/jobs' },
     { label: '常勤・パート', href: '/regular-jobs' },
+    { label: '施設特集', href: '/features' },
     { label: 'マイページ', href: '/mypage' },
   ]
 
