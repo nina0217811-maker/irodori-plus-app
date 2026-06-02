@@ -31,10 +31,14 @@ export async function POST(req: NextRequest) {
       .eq('id', app.job_id)
       .single()
 
+    console.log('★ job:', JSON.stringify(job))
+
+    if (!job?.facility_id) return NextResponse.json({ error: 'facility_id not found' }, { status: 404 })
+
     const { data: facility } = await supabase
       .from('facilities')
       .select('facility_name')
-      .eq('id', job?.facility_id)
+      .eq('id', job.facility_id)
       .single()
 
     const { data: nurse } = await supabase
@@ -43,17 +47,24 @@ export async function POST(req: NextRequest) {
       .eq('id', app.nurse_id)
       .maybeSingle()
 
-    const isFacility = senderId === job?.facility_id
-    const recipientId = isFacility ? app.nurse_id : job?.facility_id
+    const isFacility = senderId === job.facility_id
+    const recipientId = isFacility ? app.nurse_id : job.facility_id
     const senderName = isFacility ? facility?.facility_name : nurse?.name
     const recipientName = isFacility ? nurse?.name : facility?.facility_name
 
-    const { data: { user: recipientUser } } = await supabase.auth.admin.getUserById(recipientId!)
-    if (!recipientUser?.email) return NextResponse.json({ success: true })
+    console.log('★ isFacility:', isFacility)
+    console.log('★ recipientId:', recipientId)
+
+    if (!recipientId) return NextResponse.json({ error: 'recipientId not found' }, { status: 404 })
+
+    const { data: authData, error: authError } = await supabase.auth.admin.getUserById(recipientId)
+    console.log('★ authError:', JSON.stringify(authError))
+
+    if (!authData?.user?.email) return NextResponse.json({ success: true })
 
     await resend.emails.send({
       from: 'irodori+ <no-reply@irodori0305.jp>',
-      to: recipientUser.email,
+      to: authData.user.email,
       subject: `【irodori+】${senderName}さんからメッセージが届きました`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1A2235;">
