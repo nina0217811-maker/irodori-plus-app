@@ -32,13 +32,32 @@ export default function ChatsPage() {
       const isFactility = !!facility
       setRole(isFactility ? 'facility' : 'nurse')
 
-      const { data: apps } = await supabase
-        .from('applications')
-        .select('id, status, nurse_id, job_id')
-        .eq(isFactility ? 'job_id' : 'nurse_id', user.id)
-        .eq('status', 'accepted')
+      let apps: any[] = []
 
-      if (!apps || apps.length === 0) { setLoading(false); return }
+      if (isFactility) {
+        const { data: jobs } = await supabase
+          .from('jobs')
+          .select('id')
+          .eq('facility_id', user.id)
+        const jobIds = jobs?.map(j => j.id) ?? []
+        if (jobIds.length > 0) {
+          const { data } = await supabase
+            .from('applications')
+            .select('id, status, nurse_id, job_id')
+            .in('job_id', jobIds)
+            .eq('status', 'accepted')
+          apps = data ?? []
+        }
+      } else {
+        const { data } = await supabase
+          .from('applications')
+          .select('id, status, nurse_id, job_id')
+          .eq('nurse_id', user.id)
+          .eq('status', 'accepted')
+        apps = data ?? []
+      }
+
+      if (apps.length === 0) { setLoading(false); return }
 
       const rooms: ChatRoom[] = []
 
