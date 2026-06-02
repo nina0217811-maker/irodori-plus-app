@@ -86,7 +86,29 @@ export default function AdminFeaturesPage() {
   }
 
   const togglePublish = async (f: Feature) => {
-    await supabase.from('features').update({ published: !f.published }).eq('id', f.id)
+    const newPublished = !f.published
+    await supabase.from('features').update({ published: newPublished }).eq('id', f.id)
+
+    if (newPublished) {
+      const { data: facilityData } = await supabase.from('facilities').select('facility_name, facility_type').eq('id', f.facility_id).single()
+      await fetch('/api/line-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `✨【施設特集を公開しました】✨
+
+📰 ${f.title}
+🏥 ${facilityData?.facility_name ?? ''}（${facilityData?.facility_type ?? ''}）
+
+▼ こんな方におすすめ
+${f.subtitle ?? ''}
+
+気になる方はチェック👇
+https://irodori0305.jp/features/${f.id}`,
+        }),
+      })
+    }
+
     fetchAll()
   }
 
