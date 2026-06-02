@@ -76,6 +76,7 @@ export default function ChatPage() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !userId) return
     const body = newMessage.trim()
+    setNewMessage('') // 先にクリアして二重送信を防ぐ
 
     await supabase.from('messages').insert({
       application_id: applicationId,
@@ -88,8 +89,6 @@ export default function ChatPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ applicationId, senderId: userId, body }),
     })
-
-    setNewMessage('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
