@@ -23,6 +23,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
   const [otherName, setOtherName] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -74,9 +75,10 @@ export default function ChatPage() {
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !userId) return
+    if (!newMessage.trim() || !userId || sending) return
+    setSending(true)
     const body = newMessage.trim()
-    setNewMessage('') // 先にクリアして二重送信を防ぐ
+    setNewMessage('')
 
     await supabase.from('messages').insert({
       application_id: applicationId,
@@ -89,6 +91,8 @@ export default function ChatPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ applicationId, senderId: userId, body }),
     })
+
+    setSending(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -241,14 +245,14 @@ export default function ChatPage() {
         />
         <button
           onClick={sendMessage}
-          disabled={!newMessage.trim()}
+          disabled={!newMessage.trim() || sending}
           style={{
             width: '44px',
             height: '44px',
             borderRadius: '22px',
-            background: newMessage.trim() ? '#E07070' : '#EDE0E0',
+            background: newMessage.trim() && !sending ? '#E07070' : '#EDE0E0',
             border: 'none',
-            cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
+            cursor: newMessage.trim() && !sending ? 'pointer' : 'not-allowed',
             fontSize: '18px',
             display: 'flex',
             alignItems: 'center',
@@ -257,7 +261,7 @@ export default function ChatPage() {
             transition: 'background 0.15s',
           }}
         >
-          ➤
+          {sending ? '...' : '➤'}
         </button>
       </div>
     </div>
