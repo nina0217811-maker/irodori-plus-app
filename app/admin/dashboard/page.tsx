@@ -65,7 +65,7 @@ export default function AdminDashboard() {
                       <button onClick={async()=>{
                         if(!confirm((n.is_suspended?"停止解除":"停止")+"しますか？"))return
                         await supabase.from("nurse_profiles").update({is_suspended:!n.is_suspended}).eq("id",n.id)
-                        fetchData()
+                        fetchAll()
                       }} style={{padding:"3px 10px",borderRadius:"6px",border:"none",background:n.is_suspended?"#065F46":"#991B1B",color:"#fff",fontSize:"12px",cursor:"pointer"}}>
                         {n.is_suspended?"解除":"停止"}
                       </button>
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
                         if(!confirm("削除しますか？この操作は取り消せません"))return
                         await supabase.from("nurse_profiles").delete().eq("id",n.id)
                         await supabase.auth.admin.deleteUser(n.id)
-                        fetchData()
+                        fetchAll()
                       }} style={{padding:"3px 10px",borderRadius:"6px",border:"1px solid #fca5a5",background:"none",color:"#ef4444",fontSize:"12px",cursor:"pointer"}}>削除</button>
                     </td>
                   </tr>)}</tbody>
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
                         await supabase.from("jobs").delete().eq("facility_id",f.id)
                         await supabase.from("facilities").delete().eq("id",f.id)
                         await supabase.auth.admin.deleteUser(f.id)
-                        fetchData()
+                        fetchAll()
                       }} style={{padding:"3px 10px",borderRadius:"6px",border:"1px solid #fca5a5",background:"none",color:"#ef4444",fontSize:"12px",cursor:"pointer"}}>削除</button>
                     </td>
                   </tr>)}</tbody>
