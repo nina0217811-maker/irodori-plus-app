@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [otherName, setOtherName] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const sendingRef = useRef(false)
+  const newMessageRef = useRef('')
 
   useEffect(() => {
     fetchUser()
@@ -75,13 +76,18 @@ export default function ChatPage() {
     if (showLoading) setLoading(false)
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    newMessageRef.current = e.target.value
+    setNewMessage(e.target.value)
+  }
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !userId) return
+    const body = newMessageRef.current.trim()
+    if (!body || !userId) return
     if (sendingRef.current) return
     sendingRef.current = true
     setSending(true)
-
-    const body = newMessage.trim()
+    newMessageRef.current = ''
     setNewMessage('')
 
     await supabase.from('messages').insert({
@@ -230,7 +236,7 @@ export default function ChatPage() {
       }}>
         <textarea
           value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder='メッセージを入力... (Enterで送信)'
           rows={1}
