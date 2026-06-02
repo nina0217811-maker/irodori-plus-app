@@ -28,7 +28,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     fetchUser()
-    fetchMessages()
+    fetchMessages(true)
 
     const channel = supabase
       .channel(`chat-${applicationId}`)
@@ -70,7 +70,8 @@ export default function ChatPage() {
     }
   }
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     const { data, error } = await supabase
       .from('messages')
       .select(`*, profiles (name, role)`)
@@ -78,7 +79,7 @@ export default function ChatPage() {
       .order('created_at', { ascending: true })
 
     if (!error && data) setMessages(data)
-    setLoading(false)
+    if (showLoading) setLoading(false)
   }
 
   const sendMessage = async () => {
