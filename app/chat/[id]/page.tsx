@@ -30,20 +30,11 @@ export default function ChatPage() {
     fetchUser()
     fetchMessages(true)
 
-    const channel = supabase
-      .channel(`chat-${applicationId}`)
-      .on('postgres_changes' as any, {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `application_id=eq.${applicationId}`,
-      }, () => {
-        fetchMessages()
-      })
+    const interval = setInterval(() => {
+      fetchMessages(false)
+    }, 3000)
 
-    channel.subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return () => clearInterval(interval)
   }, [applicationId])
 
   useEffect(() => {
