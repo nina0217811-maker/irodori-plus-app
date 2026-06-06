@@ -66,17 +66,18 @@ export default function PostJobPage() {
       const { data: facilityData } = await supabase
         .from('facilities')
         .select('facility_name, address')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle()
 
       const facilityName = facilityData?.facility_name ?? ''
       const address = facilityData?.address ?? ''
+      const descriptionPreview = form.description.slice(0, 100) + (form.description.length > 100 ? '...' : '')
 
       await fetch('/api/line-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n📋 ${descriptionPreview}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
         }),
       })
       setDone(true)
@@ -105,7 +106,6 @@ export default function PostJobPage() {
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
-      {/* キャンセルポリシー同意モーダル */}
       {showPolicy && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
