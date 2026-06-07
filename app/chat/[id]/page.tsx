@@ -114,9 +114,6 @@ export default function ChatPage() {
     const file = e.target.files?.[0]
     if (!file || !userId) return
 
-    setSending(true)
-    sendingRef.current = true
-
     const ext = file.name.split('.').pop()
     const path = `${userId}/${Date.now()}.${ext}`
 
@@ -125,9 +122,9 @@ export default function ChatPage() {
       .upload(path, file)
 
     if (uploadError) {
-      alert('画像のアップロードに失敗しました')
-      setSending(false)
-      sendingRef.current = false
+      console.error('upload error:', uploadError)
+      alert('画像のアップロードに失敗しました: ' + uploadError.message)
+      if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
 
@@ -307,14 +304,13 @@ export default function ChatPage() {
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={sending}
           style={{
             width: '44px',
             height: '44px',
             borderRadius: '22px',
             background: '#F1F5F9',
             border: 'none',
-            cursor: sending ? 'not-allowed' : 'pointer',
+            cursor: 'pointer',
             fontSize: '20px',
             display: 'flex',
             alignItems: 'center',
