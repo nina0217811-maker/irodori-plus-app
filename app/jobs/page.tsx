@@ -11,14 +11,13 @@ type Job = {
   time_to: string
   wage_amount: number
   facility_type: string
+  facility_id: string
   required_license: string
   description: string
   is_urgent: boolean
   tags: string[]
-  facilities: {
-    facility_name: string
-    address: string
-  }
+  facility_name?: string
+  address?: string
 }
 
 export default function JobsPage() {
@@ -46,19 +45,36 @@ export default function JobsPage() {
       .from('favorites')
       .select('job_id')
       .eq('nurse_id', uid)
-    if (data) {
-      setFavorites(data.map(f => f.job_id))
-    }
+    if (data) setFavorites(data.map(f => f.job_id))
   }
 
   const fetchJobs = async () => {
-    const { data, error } = await supabase
+    const { data: jobData, error } = await supabase
       .from('jobs')
-      .select(`*, facilities (facility_name, address)`)
+      .select('*')
       .eq('status', 'open')
-      .order('created_at', { ascending: false })
 
-    if (!error && data) setJobs(data)
+    if (error || !jobData) { setLoading(false); return }
+
+    const facilityIds = [...new Set(jobData.map(j => j.facility_id).filter(Boolean))]
+    const { data: facilitiesData } = await supabase
+      .from('facilities')
+      .select('id, facility_name, address')
+      .in('id', facilityIds)
+
+    const facilityMap: Record<string, { facility_name: string; address: string }> = {}
+    facilitiesData?.forEach(f => { facilityMap[f.id] = f })
+
+    const merged = jobData.map(j => ({
+      ...j,
+      facility_name: facilityMap[j.facility_id]?.facility_name ?? '',
+      address: facilityMap[j.facility_id]?.address ?? '',
+    }))
+
+    // 新しい順に並べる
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    setJobs(merged)
     setLoading(false)
   }
 
@@ -80,8 +96,9 @@ export default function JobsPage() {
 
   const filtered = jobs.filter(j =>
     !query ||
-    j.facilities?.facility_name?.includes(query) ||
-    j.facility_type?.includes(query)
+    j.facility_name?.includes(query) ||
+    j.facility_type?.includes(query) ||
+    j.address?.includes(query)
   )
 
   return (
@@ -95,7 +112,6 @@ export default function JobsPage() {
         求人一覧
       </h1>
 
-      {/* 検索バー */}
       <div style={{
         background: '#fff',
         padding: '16px',
@@ -104,7 +120,7 @@ export default function JobsPage() {
         marginBottom: '24px'
       }}>
         <input
-          placeholder='施設名・種別で検索'
+          placeholder='施設名・種別・勤務地で検索'
           value={query}
           onChange={e => setQuery(e.target.value)}
           style={{
@@ -134,8 +150,6 @@ export default function JobsPage() {
         }}>
           {filtered.map(job => (
             <div key={job.id} style={{ position: 'relative' }}>
-
-              {/* ❤️ いいねボタン */}
               <button
                 onClick={() => toggleFavorite(job.id)}
                 style={{
@@ -168,13 +182,13 @@ export default function JobsPage() {
                   onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
                   onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', paddingRight: '32px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingRight: '32px' }}>
                     <div>
                       <div style={{ fontWeight: '700', fontSize: '15px' }}>
-                        {job.facilities?.facility_name}
+                        {job.facility_name}
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                        {job.facilities?.address}
+                        {job.facility_type}
                       </div>
                     </div>
                     {job.is_urgent && (
@@ -186,6 +200,12 @@ export default function JobsPage() {
                       }}>急募</span>
                     )}
                   </div>
+
+                  {job.address && (
+                    <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>
+                      📍 {job.address}
+                    </div>
+                  )}
 
                   <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
                     📅 {job.work_date}　⏰ {job.time_from}〜{job.time_to}
