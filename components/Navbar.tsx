@@ -11,6 +11,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [role, setRole] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const fetchRole = async (userId: string) => {
     const { data: facility } = await supabase
@@ -19,6 +20,56 @@ export default function Navbar() {
       .eq('id', userId)
       .maybeSingle()
     setRole(facility ? 'facility' : 'nurse')
+    fetchUnreadCount(userId, !!facility)
+  }
+
+  const fetchUnreadCount = async (userId: string, isFacility: boolean) => {
+    let apps: any[] = []
+
+    if (isFacility) {
+      const { data: jobs } = await supabase
+        .from('jobs')
+        .select('id')
+        .eq('facility_id', userId)
+      const jobIds = jobs?.map(j => j.id) ?? []
+      if (jobIds.length > 0) {
+        const { data } = await supabase
+          .from('applications')
+          .select('id')
+          .in('job_id', jobIds)
+          .eq('status', 'accepted')
+        apps = data ?? []
+      }
+    } else {
+      const { data } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('nurse_id', userId)
+        .eq('status', 'accepted')
+      apps = data ?? []
+    }
+
+    let count = 0
+    for (const app of apps) {
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('created_at, sender_id')
+        .eq('application_id', app.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const lastMsg = messages?.[0]
+      if (!lastMsg) continue
+      if (lastMsg.sender_id === userId) continue
+
+      const storageKey = `chat_read_${app.id}`
+      const lastReadAt = localStorage.getItem(storageKey) ?? ''
+      if (!lastReadAt || new Date(lastMsg.created_at) > new Date(lastReadAt)) {
+        count++
+      }
+    }
+
+    setUnreadCount(count)
   }
 
   useEffect(() => {
@@ -36,17 +87,27 @@ export default function Navbar() {
       } else {
         setUser(null)
         setRole(null)
+        setUnreadCount(0)
       }
     })
 
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  // チャットページから離れたとき未読を再チェック
+  useEffect(() => {
+    if (user && role) {
+      const isFacility = role === 'facility'
+      fetchUnreadCount(user.id, isFacility)
+    }
+  }, [pathname])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUser(null)
     setRole(null)
     setMenuOpen(false)
+    setUnreadCount(0)
     router.push('/')
   }
 
@@ -54,14 +115,14 @@ export default function Navbar() {
     { label: '単発求人', href: '/jobs' },
     { label: '常勤・パート', href: '/regular-jobs' },
     { label: '施設特集', href: '/features' },
-    { label: '💬 チャット', href: '/chats' },
+    { label: 'チャット', href: '/chats', showBadge: true },
     { label: 'マイページ', href: '/mypage' },
   ]
 
   const facilityLinks = [
     { label: '求人管理', href: '/dashboard' },
     { label: '求人投稿', href: '/post-job' },
-    { label: '💬 チャット', href: '/chats' },
+    { label: 'チャット', href: '/chats', showBadge: true },
   ]
 
   const links = role === 'nurse' ? nurseLinks : role === 'facility' ? facilityLinks : []
@@ -99,7 +160,31 @@ export default function Navbar() {
               borderBottom: pathname === l.href ? '2px solid #E07070' : '2px solid transparent',
               padding: '18px 4px',
               cursor: 'pointer',
-            }}>{l.label}</span>
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}>
+              {l.label === 'チャット' ? '💬 チャット' : l.label}
+              {l.showBadge && unreadCount > 0 && (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '18px',
+                  height: '18px',
+                  borderRadius: '9px',
+                  background: '#E07070',
+                  color: '#fff',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  padding: '0 4px',
+                  marginLeft: '2px',
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </span>
           </Link>
         ))}
 
@@ -157,11 +242,29 @@ export default function Navbar() {
                     style={{
                       padding: '8px 12px', borderRadius: '6px',
                       cursor: 'pointer', fontSize: '14px', color: '#1A2235',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#FBF7F7')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    {l.label}
+                    <span>{l.label === 'チャット' ? '💬 チャット' : l.label}</span>
+                    {l.showBadge && unreadCount > 0 && (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '18px',
+                        height: '18px',
+                        borderRadius: '9px',
+                        background: '#E07070',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        padding: '0 4px',
+                      }}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </div>
                 ))}
                 <div style={{ height: '1px', background: '#EDE0E0', margin: '4px 0' }} />
