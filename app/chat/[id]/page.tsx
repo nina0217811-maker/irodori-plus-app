@@ -10,10 +10,6 @@ type Message = {
   sender_id: string
   created_at: string
   image_url?: string
-  profiles: {
-    name: string
-    role: string
-  }
 }
 
 export default function ChatPage() {
@@ -26,6 +22,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [otherName, setOtherName] = useState('')
+  const [isFacilityUser, setIsFacilityUser] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sendingRef = useRef(false)
   const newMessageRef = useRef('')
@@ -56,6 +53,7 @@ export default function ChatPage() {
 
     const { data: job } = await supabase.from('jobs').select('facility_id').eq('id', app.job_id).single()
     const isFacility = data.user.id === job?.facility_id
+    setIsFacilityUser(isFacility)
 
     if (isFacility) {
       const { data: np } = await supabase.from('nurse_profiles').select('name').eq('id', app.nurse_id).maybeSingle()
@@ -70,7 +68,7 @@ export default function ChatPage() {
     if (showLoading) setLoading(true)
     const { data, error } = await supabase
       .from('messages')
-      .select(`*, profiles (name, role)`)
+      .select('id, body, sender_id, created_at, image_url')
       .eq('application_id', applicationId)
       .order('created_at', { ascending: true })
 
@@ -142,7 +140,6 @@ export default function ChatPage() {
       .getPublicUrl(path)
 
     await sendMessage(urlData.publicUrl)
-
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -232,15 +229,10 @@ export default function ChatPage() {
                     fontSize: '14px',
                     flexShrink: 0,
                   }}>
-                    {msg.profiles?.role === 'nurse' ? '👩‍⚕️' : '🏥'}
+                    {isFacilityUser ? '👩‍⚕️' : '🏥'}
                   </div>
                 )}
                 <div style={{ maxWidth: '70%' }}>
-                  {!isMe && (
-                    <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '3px', paddingLeft: '4px' }}>
-                      {msg.profiles?.name}
-                    </div>
-                  )}
                   {msg.image_url ? (
                     <div>
                       <img
