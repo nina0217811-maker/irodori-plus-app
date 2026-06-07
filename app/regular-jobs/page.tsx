@@ -14,6 +14,8 @@ type RegularJob = {
   work_days: string
   location: string
   facility_id: string
+  facility_name?: string
+  facility_type?: string
 }
 
 const C = { primary: '#E07070', dark: '#C45A5A', light: '#FDF0F0', bg: '#FBF7F7', card: '#FFFFFF', border: '#EDE0E0', sub: '#64748B' }
@@ -25,14 +27,29 @@ export default function RegularJobsPage() {
 
   useEffect(() => {
     const fetchJobs = async () => {
-      const { data, error } = await supabase
+      const { data: jobsData, error } = await supabase
         .from('regular_jobs')
         .select('*')
         .eq('status', 'open')
 
-      console.log('data:', JSON.stringify(data))
-      console.log('error:', JSON.stringify(error))
-      if (data) setJobs(data)
+      if (error || !jobsData) { setLoading(false); return }
+
+      const facilityIds = [...new Set(jobsData.map(j => j.facility_id).filter(Boolean))]
+      const { data: facilitiesData } = await supabase
+        .from('facilities')
+        .select('id, facility_name, facility_type')
+        .in('id', facilityIds)
+
+      const facilityMap: Record<string, { facility_name: string; facility_type: string }> = {}
+      facilitiesData?.forEach(f => { facilityMap[f.id] = f })
+
+      const merged = jobsData.map(j => ({
+        ...j,
+        facility_name: facilityMap[j.facility_id]?.facility_name ?? '',
+        facility_type: facilityMap[j.facility_id]?.facility_type ?? '',
+      }))
+
+      setJobs(merged)
       setLoading(false)
     }
     fetchJobs()
@@ -70,10 +87,12 @@ export default function RegularJobsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div>
                       <span style={{ background: C.light, color: C.dark, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, marginRight: 8 }}>{job.employment_type}</span>
+                      <span style={{ fontSize: 12, color: C.sub }}>{job.facility_type}</span>
                     </div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: C.primary }}>{job.salary_type} ¥{job.salary_amount?.toLocaleString()}</div>
                   </div>
                   <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
+                  <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>🏥 {job.facility_name}</div>
                   <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>📍 {job.location}</div>
                   <div style={{ fontSize: 13, color: C.sub }}>⏰ {job.work_hours}　📅 {job.work_days}</div>
                 </div>
