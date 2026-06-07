@@ -74,6 +74,7 @@ export default function ChatPage() {
       .eq('application_id', applicationId)
       .order('created_at', { ascending: true })
 
+    if (error) console.error('fetchMessages error:', error)
     if (!error && data) setMessages(data)
     if (showLoading) setLoading(false)
   }
@@ -93,12 +94,20 @@ export default function ChatPage() {
     newMessageRef.current = ''
     setNewMessage('')
 
-    await supabase.from('messages').insert({
+    const { error: insertError } = await supabase.from('messages').insert({
       application_id: applicationId,
       sender_id: userId,
       body: body || '',
       image_url: imageUrl ?? null,
     })
+
+    if (insertError) {
+      console.error('insert error:', JSON.stringify(insertError))
+      alert('メッセージの送信に失敗しました: ' + insertError.message)
+      setSending(false)
+      sendingRef.current = false
+      return
+    }
 
     await fetch('/api/notify-message', {
       method: 'POST',
