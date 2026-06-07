@@ -10,15 +10,24 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { nurseIds, facilityName, jobId } = await req.json()
+    const { nurseIds, facilityName, jobId, reason } = await req.json()
 
-    const { data: job } = await supabase.from('jobs').select('work_date, time_from, time_to').eq('id', jobId).single()
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('work_date, time_from, time_to')
+      .eq('id', jobId)
+      .single()
 
     for (const nurseId of nurseIds) {
       const { data: { user } } = await supabase.auth.admin.getUserById(nurseId)
       if (!user?.email) continue
 
-      const { data: nurse } = await supabase.from('nurse_profiles').select('name').eq('id', nurseId).maybeSingle()
+      const { data: nurse } = await supabase
+        .from('nurse_profiles')
+        .select('name')
+        .eq('id', nurseId)
+        .maybeSingle()
+
       const nurseName = nurse?.name || 'さん'
 
       await resend.emails.send({
@@ -33,8 +42,13 @@ export async function POST(req: NextRequest) {
             <div style="background: #fff; padding: 24px; border: 1px solid #EDE0E0; border-top: none; border-radius: 0 0 12px 12px;">
               <p>${nurseName} さん</p>
               <p>この度は応募いただきありがとうございました。</p>
-              <p>誠に恐れながら、今回は他の方の採用が決定いたしました。またのご応募をお待ちしております。</p>
-
+              <p>誠に恐れながら、今回はご期待に添えない結果となりました。またのご応募をお待ちしております。</p>
+              ${reason ? `
+              <div style="background: #FBF7F7; border-radius: 8px; padding: 14px; margin: 16px 0; border-left: 4px solid #E07070;">
+                <div style="font-size: 13px; color: #64748B; margin-bottom: 4px;">不採用の理由</div>
+                <div style="font-size: 14px; font-weight: 600; color: #1A2235;">${reason}</div>
+              </div>
+              ` : ''}
               <div style="background: #F8FAFC; border-radius: 8px; padding: 16px; margin: 20px 0;">
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr><td style="padding: 6px 0; color: #64748B; width: 120px;">施設名</td><td style="padding: 6px 0;">${facilityName}</td></tr>
@@ -42,7 +56,6 @@ export async function POST(req: NextRequest) {
                   <tr><td style="padding: 6px 0; color: #64748B;">時間</td><td style="padding: 6px 0;">${job?.time_from ?? ''}〜${job?.time_to ?? ''}</td></tr>
                 </table>
               </div>
-
               <a href="https://irodori0305.jp/jobs" style="display: inline-block; padding: 12px 24px; background: #E07070; color: #fff; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">他の求人を探す</a>
               <p style="color: #64748B; font-size: 13px; margin-top: 24px;">irodori+（いろどりプラス）</p>
             </div>
