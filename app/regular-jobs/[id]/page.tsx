@@ -30,13 +30,19 @@ const C = {
   sub: '#64748B',
 }
 
+const IRODORI_FACILITY_ID = '2f22fea3-4f1f-4fac-9053-1f8d4b14f523'
+
 export default function RegularJobDetailPage() {
   const { id } = useParams()
   const [job, setJob] = useState<RegularJob | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchJob = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+
       const { data: jobData } = await supabase
         .from('regular_jobs')
         .select('*')
@@ -63,6 +69,8 @@ export default function RegularJobDetailPage() {
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#64748B' }}>読み込み中...</div>
   if (!job) return <div style={{ textAlign: 'center', padding: 60 }}>求人が見つかりません</div>
+
+  const isIrodori = job.facility_id === IRODORI_FACILITY_ID
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', paddingBottom: 60 }}>
@@ -96,10 +104,22 @@ export default function RegularJobDetailPage() {
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>業務内容</div>
             <div style={{ fontSize: 14, color: '#1A2235', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{job.description}</div>
           </div>
-          <div style={{ background: C.light, borderRadius: 10, padding: 16, fontSize: 13, color: C.dark, lineHeight: 1.8 }}>
-            💡 この求人に興味がある方は、irodori＋公式LINEにご連絡ください。<br />
-            友だち追加後、求人タイトルとお名前をお送りください。
-          </div>
+
+          {isIrodori ? (
+            <div style={{ background: C.light, borderRadius: 10, padding: 16, fontSize: 13, color: C.dark, lineHeight: 1.8 }}>
+              💡 この求人に興味がある方は、irodori＋公式LINEにご連絡ください。<br />
+              友だち追加後、求人タイトルとお名前をお送りください。
+            </div>
+          ) : (
+            <div style={{ background: '#F0FDF4', borderRadius: 10, padding: 16, fontSize: 13, color: '#065F46', lineHeight: 1.8 }}>
+              💬 この求人に興味がある方は、チャットからお問い合わせください。<br />
+              {currentUserId ? (
+                <span>マイページの応募履歴からチャットを開始できます。</span>
+              ) : (
+                <span>まずは<Link href='/register' style={{ color: C.primary, fontWeight: 700 }}>会員登録</Link>またはログインしてください。</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
