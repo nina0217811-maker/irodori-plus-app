@@ -13,7 +13,7 @@ type RegularJob = {
   work_hours: string
   work_days: string
   location: string
-  facilities?: { facility_name: string; facility_type: string }
+  facility_id: string
 }
 
 const C = { primary: '#E07070', dark: '#C45A5A', light: '#FDF0F0', bg: '#FBF7F7', card: '#FFFFFF', border: '#EDE0E0', sub: '#64748B' }
@@ -29,7 +29,6 @@ export default function RegularJobsPage() {
         .from('regular_jobs')
         .select('*')
         .eq('status', 'open')
-        .order('created_at', { ascending: false })
 
       console.log('data:', JSON.stringify(data))
       console.log('error:', JSON.stringify(error))
@@ -71,12 +70,10 @@ export default function RegularJobsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div>
                       <span style={{ background: C.light, color: C.dark, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, marginRight: 8 }}>{job.employment_type}</span>
-                      <span style={{ fontSize: 12, color: C.sub }}>{job.facilities?.facility_type}</span>
                     </div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: C.primary }}>{job.salary_type} ¥{job.salary_amount?.toLocaleString()}</div>
                   </div>
                   <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
-                  <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>🏥 {job.facilities?.facility_name}</div>
                   <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>📍 {job.location}</div>
                   <div style={{ fontSize: 13, color: C.sub }}>⏰ {job.work_hours}　📅 {job.work_days}</div>
                 </div>
