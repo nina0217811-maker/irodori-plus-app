@@ -31,12 +31,11 @@ export default function AdminDashboard() {
 
     const { data: nurseData } = await supabase.from("nurse_profiles").select("id,name,is_suspended")
     const { data: facilityData } = await supabase.from("facilities").select("id,facility_name,plan_status")
-    const { data: jobData } = await supabase.from("jobs").select("id,facility_id,applications(id,status)")
+    const { data: jobData } = await supabase.from("jobs").select("id,facility_id,status,required_count,applications(id,status)")
 
     setNurses(nurseData || [])
     setFacilities(facilityData || [])
 
-    // facility_idからfacility_nameを引く
     const facilityIds = [...new Set((jobData || []).map((j: any) => j.facility_id))]
     const { data: facilityNames } = await supabase
       .from("facilities")
@@ -50,11 +49,15 @@ export default function AdminDashboard() {
     ;(jobData || []).forEach((job: any) => {
       const fid = job.facility_id
       const fname = fnMap[fid] || fid
-      if (!fm[fid]) fm[fid] = { name: fname, jobs: 0, applications: 0, hired: 0 }
+      if (!fm[fid]) fm[fid] = { name: fname, jobs: 0, filledJobs: 0, applications: 0 }
       fm[fid].jobs += 1
-      const apps = job.applications || []
-      fm[fid].applications += apps.length
-      fm[fid].hired += apps.filter((a: any) => a.status === "accepted").length
+      fm[fid].applications += (job.applications || []).length
+
+      // 定員が埋まった求人（acceptedがrequired_count以上、またはstatus=closed）
+      const acceptedCount = (job.applications || []).filter((a: any) => a.status === "accepted").length
+      if (acceptedCount >= (job.required_count || 1)) {
+        fm[fid].filledJobs += 1
+      }
     })
 
     setJobStats(Object.values(fm))
@@ -70,7 +73,6 @@ export default function AdminDashboard() {
 
   const th = { textAlign: "left" as const, padding: "10px 16px", background: "#1a1a1a", color: "#888", fontSize: "12px", borderBottom: "1px solid #2a2a2a" }
   const td = { padding: "12px 16px", borderBottom: "1px solid #1f1f1f", fontSize: "14px" }
-  const fmt = (d: string) => d ? new Date(d).toLocaleDateString("ja-JP") : "-"
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f0f0f", color: "#e5e5e5", fontFamily: "'Noto Sans JP',sans-serif" }}>
@@ -189,32 +191,32 @@ export default function AdminDashboard() {
 
             {tab === "jobs" && (
               <div>
-                <div style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>施設ごとの求人・採用実績</div>
+                <div style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>施設ごとの求人・採用充足率</div>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
                       <th style={th}>施設名</th>
                       <th style={th}>求人数</th>
                       <th style={th}>応募数</th>
-                      <th style={th}>採用数</th>
-                      <th style={th}>採用率</th>
+                      <th style={th}>充足済み求人</th>
+                      <th style={th}>充足率</th>
                     </tr>
                   </thead>
                   <tbody>
                     {jobStats.map((s, i) => {
-                      const rate = s.applications > 0 ? Math.round((s.hired / s.applications) * 100) : 0
+                      const rate = s.jobs > 0 ? Math.round((s.filledJobs / s.jobs) * 100) : 0
                       return (
                         <tr key={i}>
                           <td style={td}>{s.name}</td>
                           <td style={td}>{s.jobs}</td>
                           <td style={td}>{s.applications}</td>
-                          <td style={td}>{s.hired}</td>
+                          <td style={td}>{s.filledJobs}</td>
                           <td style={td}>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                               <div style={{ flex: 1, background: "#1a1a1a", borderRadius: "4px", height: "6px" }}>
-                                <div style={{ width: rate + "%", background: "#a78bfa", borderRadius: "4px", height: "6px" }} />
+                                <div style={{ width: rate + "%", background: rate === 100 ? "#34d399" : "#a78bfa", borderRadius: "4px", height: "6px" }} />
                               </div>
-                              <span style={{ color: "#a78bfa", fontSize: "12px", width: "36px" }}>{rate}%</span>
+                              <span style={{ color: rate === 100 ? "#34d399" : "#a78bfa", fontSize: "12px", width: "36px" }}>{rate}%</span>
                             </div>
                           </td>
                         </tr>
