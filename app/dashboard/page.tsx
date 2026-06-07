@@ -49,6 +49,13 @@ type NurseProfile = {
   direct_cancel_count?: number
 }
 
+const REJECT_REASONS = [
+  '応募要件と合わなかった',
+  '定員に達した',
+  '求人を取り下げた',
+  'その他',
+]
+
 export default function DashboardPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
@@ -71,6 +78,9 @@ export default function DashboardPage() {
   const [reportReason, setReportReason] = useState('')
   const [reportDetail, setReportDetail] = useState('')
   const [reporting, setReporting] = useState(false)
+  const [rejectModal, setRejectModal] = useState<{ applicationId: string, nurseId: string, nurseName: string, jobId: string } | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejecting, setRejecting] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -234,6 +244,29 @@ export default function DashboardPage() {
     fetchData()
   }
 
+  const rejectNurse = async () => {
+    if (!rejectModal || !rejectReason) return
+    setRejecting(true)
+
+    await supabase.from('applications').update({ status: 'rejected' }).eq('id', rejectModal.applicationId)
+
+    await fetch('/api/notify-rejected', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nurseIds: [rejectModal.nurseId],
+        facilityName,
+        jobId: rejectModal.jobId,
+        reason: rejectReason,
+      }),
+    })
+
+    setRejecting(false)
+    setRejectModal(null)
+    setRejectReason('')
+    fetchData()
+  }
+
   const submitReview = async () => {
     if (!reviewModal || !userId || rating === 0) return
     setSubmitting(true)
@@ -270,6 +303,47 @@ export default function DashboardPage() {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
+
+      {/* 不採用モーダル */}
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>不採用通知を送る</h2>
+              <button onClick={() => { setRejectModal(null); setRejectReason('') }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{rejectModal.nurseName} さんに不採用通知を送ります</p>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '10px' }}>不採用の理由 *</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {REJECT_REASONS.map(reason => (
+                  <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${rejectReason === reason ? '#E07070' : '#EDE0E0'}`, background: rejectReason === reason ? '#FDF0F0' : '#fff' }}>
+                    <input
+                      type='radio'
+                      name='rejectReason'
+                      value={reason}
+                      checked={rejectReason === reason}
+                      onChange={() => setRejectReason(reason)}
+                      style={{ accentColor: '#E07070' }}
+                    />
+                    <span style={{ fontSize: '14px', color: '#1A2235' }}>{reason}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setRejectModal(null); setRejectReason('') }}
+                style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>
+                キャンセル
+              </button>
+              <button onClick={rejectNurse} disabled={!rejectReason || rejecting}
+                style={{ flex: 2, padding: '10px', background: !rejectReason || rejecting ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !rejectReason || rejecting ? 'not-allowed' : 'pointer' }}>
+                {rejecting ? '送信中...' : '不採用通知を送る'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 求人編集モーダル */}
       {editJobModal && (
@@ -641,17 +715,32 @@ export default function DashboardPage() {
                       const nurseName = nurseNames[app.nurse_id] || '読み込み中'
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
                       const isAccepted = app.status === 'accepted'
+                      const isRejected = app.status === 'rejected'
                       return (
                         <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <button onClick={() => handleViewProfile(app.nurse_id)}
                             style={{ padding: '6px 14px', background: '#F1F5F9', color: '#1A2235', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                             👤 {nurseName}
                           </button>
-                          {!isAccepted && (
+                          {!isAccepted && !isRejected && (
                             <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)}
                               style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                               ✅ 採用する
                             </button>
+                          )}
+                          {!isAccepted && !isRejected && (
+                            <button onClick={() => {
+                              setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id })
+                              setRejectReason('')
+                            }}
+                              style={{ padding: '6px 14px', background: '#FEF2F2', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                              ✕ 不採用
+                            </button>
+                          )}
+                          {isRejected && (
+                            <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#94A3B8', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>
+                              不採用済み
+                            </span>
                           )}
                           {isAccepted && (
                             <a href={`/chat/${app.id}`} style={{ padding: '6px 14px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
