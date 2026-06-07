@@ -11,17 +11,12 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { applicationId, senderId, body } = await req.json()
-    console.log('★ applicationId:', applicationId)
-    console.log('★ senderId:', senderId)
 
-    const { data: app, error: appError } = await supabase
+    const { data: app } = await supabase
       .from('applications')
       .select('nurse_id, job_id')
       .eq('id', applicationId)
       .single()
-
-    console.log('★ app:', JSON.stringify(app))
-    console.log('★ appError:', JSON.stringify(appError))
 
     if (!app) return NextResponse.json({ error: 'application not found' }, { status: 404 })
 
@@ -30,8 +25,6 @@ export async function POST(req: NextRequest) {
       .select('work_date, time_from, time_to, facility_id')
       .eq('id', app.job_id)
       .single()
-
-    console.log('★ job:', JSON.stringify(job))
 
     if (!job?.facility_id) return NextResponse.json({ error: 'facility_id not found' }, { status: 404 })
 
@@ -52,14 +45,9 @@ export async function POST(req: NextRequest) {
     const senderName = isFacility ? facility?.facility_name : nurse?.name
     const recipientName = isFacility ? nurse?.name : facility?.facility_name
 
-    console.log('★ isFacility:', isFacility)
-    console.log('★ recipientId:', recipientId)
-
     if (!recipientId) return NextResponse.json({ error: 'recipientId not found' }, { status: 404 })
 
-    const { data: authData, error: authError } = await supabase.auth.admin.getUserById(recipientId)
-    console.log('★ authError:', JSON.stringify(authError))
-
+    const { data: authData } = await supabase.auth.admin.getUserById(recipientId)
     if (!authData?.user?.email) return NextResponse.json({ success: true })
 
     await resend.emails.send({
