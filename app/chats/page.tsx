@@ -10,6 +10,7 @@ type ChatRoom = {
   other_name: string
   last_message: string
   last_message_at: string
+  last_message_sender_id: string
   job_work_date: string
   job_wage: number
   unread: boolean
@@ -64,7 +65,7 @@ export default function ChatsPage() {
       for (const app of apps) {
         const { data: messages } = await supabase
           .from('messages')
-          .select('body, created_at')
+          .select('body, created_at, sender_id')
           .eq('application_id', app.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -84,16 +85,35 @@ export default function ChatsPage() {
           otherName = fac?.facility_name ?? '施設'
         }
 
+        const lastMsg = messages?.[0]
+        const lastMsgAt = lastMsg?.created_at ?? ''
+        const lastMsgSenderId = lastMsg?.sender_id ?? ''
+
+        // 未読判定：自分以外が送ったメッセージで、最終既読時刻より新しいもの
+        const storageKey = `chat_read_${app.id}`
+        const lastReadAt = localStorage.getItem(storageKey) ?? ''
+        const isUnread = lastMsgSenderId !== user.id &&
+          lastMsgAt !== '' &&
+          (!lastReadAt || new Date(lastMsgAt) > new Date(lastReadAt))
+
         rooms.push({
           application_id: app.id,
           other_name: otherName,
-          last_message: messages?.[0]?.body ?? 'メッセージなし',
-          last_message_at: messages?.[0]?.created_at ?? '',
+          last_message: lastMsg?.body ?? 'メッセージなし',
+          last_message_at: lastMsgAt,
+          last_message_sender_id: lastMsgSenderId,
           job_work_date: job?.work_date ?? '',
           job_wage: job?.wage_amount ?? 0,
-          unread: false,
+          unread: isUnread,
         })
       }
+
+      // 未読を上に、その後最新順に並べる
+      rooms.sort((a, b) => {
+        if (a.unread && !b.unread) return -1
+        if (!a.unread && b.unread) return 1
+        return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+      })
 
       setChatRooms(rooms)
       setLoading(false)
@@ -117,17 +137,63 @@ export default function ChatsPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {chatRooms.map(room => (
-              <Link key={room.application_id} href={`/chat/${room.application_id}`} style={{ textDecoration: 'none' }}>
-                <div style={{ background: C.card, padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 16, alignItems: 'center', cursor: 'pointer' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 24, background: `linear-gradient(135deg, ${C.primary}, #C0727A)`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
-                    {room.other_name.charAt(0)}
+              <Link
+                key={room.application_id}
+                href={`/chat/${room.application_id}`}
+                style={{ textDecoration: 'none' }}
+                onClick={() => {
+                  // チャットを開いたとき既読にする
+                  localStorage.setItem(`chat_read_${room.application_id}`, new Date().toISOString())
+                }}
+              >
+                <div style={{
+                  background: room.unread ? '#FFF5F5' : C.card,
+                  padding: '16px 20px',
+                  borderBottom: `1px solid ${C.border}`,
+                  display: 'flex',
+                  gap: 16,
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  borderLeft: room.unread ? '4px solid #E07070' : '4px solid transparent',
+                }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      background: `linear-gradient(135deg, ${C.primary}, #C0727A)`,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 20,
+                      fontWeight: 700,
+                    }}>
+                      {room.other_name.charAt(0)}
+                    </div>
+                    {room.unread && (
+                      <div style={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -2,
+                        width: 12,
+                        height: 12,
+                        borderRadius: 6,
+                        background: '#E07070',
+                        border: '2px solid #fff',
+                      }} />
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{room.other_name}</div>
-                      <div style={{ fontSize: 11, color: C.sub }}>{room.last_message_at ? new Date(room.last_message_at).toLocaleDateString('ja-JP') : ''}</div>
+                      <div style={{ fontWeight: room.unread ? 700 : 600, fontSize: 15, color: room.unread ? '#C45A5A' : '#1A2235' }}>
+                        {room.other_name}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.sub }}>
+                        {room.last_message_at ? new Date(room.last_message_at).toLocaleDateString('ja-JP') : ''}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 13, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 13, color: room.unread ? '#C45A5A' : C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: room.unread ? 600 : 400 }}>
                       {room.last_message.length > 40 ? room.last_message.slice(0, 40) + '...' : room.last_message}
                     </div>
                     <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
