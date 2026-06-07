@@ -23,6 +23,18 @@ type Job = {
   applications: Application[]
 }
 
+type RegularJob = {
+  id: string
+  title: string
+  employment_type: string
+  salary_type: string
+  salary_amount: number
+  work_hours: string
+  work_days: string
+  location: string
+  status: string
+}
+
 type NurseProfile = {
   nurseId: string
   name: string
@@ -40,6 +52,7 @@ type NurseProfile = {
 export default function DashboardPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
+  const [regularJobs, setRegularJobs] = useState<RegularJob[]>([])
   const [loading, setLoading] = useState(true)
   const [facilityName, setFacilityName] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
@@ -87,6 +100,12 @@ export default function DashboardPage() {
     await supabase.from("favorites").delete().eq("job_id", jobId)
     await supabase.from("reviews").delete().eq("job_id", jobId)
     await supabase.from("jobs").delete().eq("id", jobId)
+    fetchData()
+  }
+
+  const handleDeleteRegularJob = async (jobId: string) => {
+    if (!confirm("この求人を削除しますか？")) return
+    await supabase.from('regular_jobs').delete().eq('id', jobId)
     fetchData()
   }
 
@@ -151,7 +170,6 @@ export default function DashboardPage() {
       .from('jobs')
       .select(`*, applications (id, nurse_id, status)`)
       .eq('facility_id', userData.user.id)
-      .order('created_at', { ascending: false })
 
     if (jobData) {
       setJobs(jobData)
@@ -166,6 +184,13 @@ export default function DashboardPage() {
         }
       }
     }
+
+    const { data: regularJobData } = await supabase
+      .from('regular_jobs')
+      .select('*')
+      .eq('facility_id', userData.user.id)
+
+    if (regularJobData) setRegularJobs(regularJobData)
 
     const { data: reviewData } = await supabase
       .from('reviews').select('nurse_id, job_id').eq('facility_id', userData.user.id)
@@ -387,7 +412,6 @@ export default function DashboardPage() {
               <h2 style={{ fontSize: '18px', fontWeight: '700' }}>看護師プロフィール</h2>
               <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
               <div style={{ width: 56, height: 56, borderRadius: 28, background: 'linear-gradient(135deg, #E07070, #C0727A)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>
                 {profileModal.name?.charAt(0) ?? '?'}
@@ -401,7 +425,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
             <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {[
@@ -415,7 +438,6 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-
             {profileModal.skills?.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>スキル・経験</div>
@@ -426,7 +448,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-
             {(() => {
               const cancel = profileModal.direct_cancel_count ?? 0
               const rating = profileModal.avg_rating ?? 0
@@ -451,7 +472,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
               <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '20px', fontWeight: '700', color: '#065F46' }}>
@@ -468,7 +488,6 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>直前キャンセル履歴</div>
               </div>
             </div>
-
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
               <button onClick={() => {
                 const name = profileModal.name ?? '不明'
@@ -556,12 +575,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* 単発求人 */}
       <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '15px' }}>掲載中の求人</div>
-
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>読み込み中...</div>
       ) : jobs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B' }}>
+        <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B', marginBottom: '24px' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
           <div style={{ fontWeight: '600', marginBottom: '8px' }}>まだ求人がありません</div>
           <button onClick={() => router.push('/post-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
@@ -569,7 +588,7 @@ export default function DashboardPage() {
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
           {jobs.map(job => (
             <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}>
@@ -614,7 +633,6 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-
               {job.applications?.length > 0 && (
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
@@ -623,7 +641,6 @@ export default function DashboardPage() {
                       const nurseName = nurseNames[app.nurse_id] || '読み込み中'
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
                       const isAccepted = app.status === 'accepted'
-
                       return (
                         <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <button onClick={() => handleViewProfile(app.nurse_id)}
@@ -658,6 +675,38 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 常勤・パート求人 */}
+      <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '15px' }}>常勤・パート求人</div>
+      {regularJobs.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', background: '#fff', borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B' }}>
+          <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
+          <div style={{ fontWeight: '600', marginBottom: '8px' }}>常勤・パート求人がありません</div>
+          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+            投稿する
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {regularJobs.map(job => (
+            <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button onClick={() => handleDeleteRegularJob(job.id)} style={{ padding: '4px 10px', background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}>
+                  削除
+                </button>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', marginBottom: '3px' }}>{job.title}</div>
+                  <div style={{ fontSize: '13px', color: '#64748B' }}>{job.employment_type} · {job.salary_type} ¥{job.salary_amount?.toLocaleString()} · {job.location}</div>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>⏰ {job.work_hours}　📅 {job.work_days}</div>
+                </div>
+                <span style={{ background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9', color: job.status === 'open' ? '#065F46' : '#64748B', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>
+                  {job.status === 'open' ? '掲載中' : '終了'}
+                </span>
+              </div>
             </div>
           ))}
         </div>
