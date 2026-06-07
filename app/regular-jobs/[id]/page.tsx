@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -18,7 +18,6 @@ type RegularJob = {
   facility_id: string
   facility_name?: string
   facility_type?: string
-  facility_address?: string
 }
 
 const C = {
@@ -33,7 +32,6 @@ const C = {
 
 export default function RegularJobDetailPage() {
   const { id } = useParams()
-  const router = useRouter()
   const [job, setJob] = useState<RegularJob | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +47,7 @@ export default function RegularJobDetailPage() {
 
       const { data: facilityData } = await supabase
         .from('facilities')
-        .select('facility_name, facility_type, address')
+        .select('facility_name, facility_type')
         .eq('id', jobData.facility_id)
         .maybeSingle()
 
@@ -57,7 +55,6 @@ export default function RegularJobDetailPage() {
         ...jobData,
         facility_name: facilityData?.facility_name ?? '',
         facility_type: facilityData?.facility_type ?? '',
-        facility_address: facilityData?.address ?? '',
       })
       setLoading(false)
     }
@@ -99,8 +96,9 @@ export default function RegularJobDetailPage() {
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>業務内容</div>
             <div style={{ fontSize: 14, color: '#1A2235', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{job.description}</div>
           </div>
-          <div style={{ background: C.light, borderRadius: 10, padding: 16, fontSize: 13, color: C.dark }}>
-            💡 この求人に興味がある方は、マイページからお問い合わせください。
+          <div style={{ background: C.light, borderRadius: 10, padding: 16, fontSize: 13, color: C.dark, lineHeight: 1.8 }}>
+            💡 この求人に興味がある方は、irodori＋公式LINEにご連絡ください。<br />
+            友だち追加後、求人タイトルとお名前をお送りください。
           </div>
         </div>
       </div>
