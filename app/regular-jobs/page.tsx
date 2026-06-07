@@ -25,11 +25,14 @@ export default function RegularJobsPage() {
 
   useEffect(() => {
     const fetchJobs = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('regular_jobs')
-        .select('*, facilities(facility_name, facility_type)')
+        .select('*')
         .eq('status', 'open')
         .order('created_at', { ascending: false })
+
+      console.log('data:', JSON.stringify(data))
+      console.log('error:', JSON.stringify(error))
       if (data) setJobs(data)
       setLoading(false)
     }
