@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -17,7 +16,9 @@ type RegularJob = {
   description: string
   required_license: string
   facility_id: string
-  facilities?: { facility_name: string; facility_type: string; address: string }
+  facility_name?: string
+  facility_type?: string
+  facility_address?: string
 }
 
 const C = {
@@ -37,16 +38,30 @@ export default function RegularJobDetailPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
+    const fetchJob = async () => {
+      const { data: jobData } = await supabase
         .from('regular_jobs')
-        .select('*, facilities(facility_name, facility_type, address)')
+        .select('*')
         .eq('id', id)
         .single()
-      if (data) setJob(data)
+
+      if (!jobData) { setLoading(false); return }
+
+      const { data: facilityData } = await supabase
+        .from('facilities')
+        .select('facility_name, facility_type, address')
+        .eq('id', jobData.facility_id)
+        .maybeSingle()
+
+      setJob({
+        ...jobData,
+        facility_name: facilityData?.facility_name ?? '',
+        facility_type: facilityData?.facility_type ?? '',
+        facility_address: facilityData?.address ?? '',
+      })
       setLoading(false)
     }
-    fetch()
+    fetchJob()
   }, [id])
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#64748B' }}>読み込み中...</div>
@@ -56,20 +71,18 @@ export default function RegularJobDetailPage() {
     <div style={{ background: C.bg, minHeight: '100vh', paddingBottom: 60 }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 20px' }}>
         <Link href='/regular-jobs' style={{ color: C.sub, fontSize: 13, textDecoration: 'none', display: 'block', marginBottom: 20 }}>← 求人一覧に戻る</Link>
-
         <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '28px 32px', marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <span style={{ background: C.light, color: C.dark, padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700 }}>{job.employment_type}</span>
-            <span style={{ background: '#F1F5F9', color: C.sub, padding: '4px 12px', borderRadius: 20, fontSize: 13 }}>{job.facilities?.facility_type}</span>
+            <span style={{ background: '#F1F5F9', color: C.sub, padding: '4px 12px', borderRadius: 20, fontSize: 13 }}>{job.facility_type}</span>
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{job.title}</h1>
           <div style={{ fontSize: 24, fontWeight: 700, color: C.primary, marginBottom: 20 }}>
             {job.salary_type} ¥{job.salary_amount.toLocaleString()}
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#FBF7F7', borderRadius: 10, padding: 20, marginBottom: 20 }}>
             {[
-              ['🏥 施設名', job.facilities?.facility_name ?? ''],
+              ['🏥 施設名', job.facility_name],
               ['📍 勤務地', job.location],
               ['⏰ 勤務時間', job.work_hours],
               ['📅 勤務日', job.work_days],
@@ -82,12 +95,10 @@ export default function RegularJobDetailPage() {
               </div>
             ))}
           </div>
-
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>業務内容</div>
             <div style={{ fontSize: 14, color: '#1A2235', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{job.description}</div>
           </div>
-
           <div style={{ background: C.light, borderRadius: 10, padding: 16, fontSize: 13, color: C.dark }}>
             💡 この求人に興味がある方は、マイページからお問い合わせください。
           </div>
