@@ -9,6 +9,7 @@ type Message = {
   body: string
   sender_id: string
   created_at: string
+  image_url?: string
   profiles: {
     name: string
     role: string
@@ -28,6 +29,7 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const sendingRef = useRef(false)
   const newMessageRef = useRef('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchUser()
@@ -81,9 +83,10 @@ export default function ChatPage() {
     setNewMessage(e.target.value)
   }
 
-  const sendMessage = async () => {
+  const sendMessage = async (imageUrl?: string) => {
     const body = newMessageRef.current.trim()
-    if (!body || !userId) return
+    if (!body && !imageUrl) return
+    if (!userId) return
     if (sendingRef.current) return
     sendingRef.current = true
     setSending(true)
@@ -93,17 +96,48 @@ export default function ChatPage() {
     await supabase.from('messages').insert({
       application_id: applicationId,
       sender_id: userId,
-      body,
+      body: body || '',
+      image_url: imageUrl ?? null,
     })
 
     await fetch('/api/notify-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ applicationId, senderId: userId, body }),
+      body: JSON.stringify({ applicationId, senderId: userId, body: body || '📷 画像が送信されました' }),
     })
 
     setSending(false)
     sendingRef.current = false
+  }
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+
+    setSending(true)
+    sendingRef.current = true
+
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/${Date.now()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('chat-images')
+      .upload(path, file)
+
+    if (uploadError) {
+      alert('画像のアップロードに失敗しました')
+      setSending(false)
+      sendingRef.current = false
+      return
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('chat-images')
+      .getPublicUrl(path)
+
+    await sendMessage(urlData.publicUrl)
+
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -201,16 +235,45 @@ export default function ChatPage() {
                       {msg.profiles?.name}
                     </div>
                   )}
-                  <div style={{
-                    background: isMe ? '#E07070' : '#F1F5F9',
-                    color: isMe ? '#fff' : '#1A2235',
-                    padding: '10px 14px',
-                    borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                  }}>
-                    {msg.body}
-                  </div>
+                  {msg.image_url ? (
+                    <div>
+                      <img
+                        src={msg.image_url}
+                        alt="送信画像"
+                        style={{
+                          maxWidth: '240px',
+                          borderRadius: '12px',
+                          display: 'block',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => window.open(msg.image_url, '_blank')}
+                      />
+                      {msg.body && (
+                        <div style={{
+                          background: isMe ? '#E07070' : '#F1F5F9',
+                          color: isMe ? '#fff' : '#1A2235',
+                          padding: '10px 14px',
+                          borderRadius: '12px',
+                          fontSize: '14px',
+                          lineHeight: '1.6',
+                          marginTop: '4px',
+                        }}>
+                          {msg.body}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: isMe ? '#E07070' : '#F1F5F9',
+                      color: isMe ? '#fff' : '#1A2235',
+                      padding: '10px 14px',
+                      borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      fontSize: '14px',
+                      lineHeight: '1.6',
+                    }}>
+                      {msg.body}
+                    </div>
+                  )}
                   <div style={{
                     fontSize: '11px',
                     color: '#94A3B8',
@@ -233,7 +296,34 @@ export default function ChatPage() {
         paddingTop: '12px',
         borderTop: '1px solid #EDE0E0',
         marginTop: '8px',
+        alignItems: 'flex-end',
       }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleImageSelect}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={sending}
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '22px',
+            background: '#F1F5F9',
+            border: 'none',
+            cursor: sending ? 'not-allowed' : 'pointer',
+            fontSize: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          📷
+        </button>
         <textarea
           value={newMessage}
           onChange={handleChange}
@@ -255,7 +345,7 @@ export default function ChatPage() {
           onBlur={e => e.target.style.borderColor = '#EDE0E0'}
         />
         <button
-          onClick={sendMessage}
+          onClick={() => sendMessage()}
           disabled={!newMessage.trim() || sending}
           style={{
             width: '44px',
