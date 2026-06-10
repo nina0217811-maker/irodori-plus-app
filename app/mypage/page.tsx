@@ -13,6 +13,7 @@ type Profile = {
   skills: string[]
   age?: number
   gender?: string
+  license_url?: string
 }
 
 type Application = {
@@ -76,7 +77,7 @@ export default function MyPage() {
 
       const { data: np } = await supabase
         .from('nurse_profiles')
-        .select('name, license, experience_years, areas, skills, age, gender')
+        .select('name, license, experience_years, areas, skills, age, gender, license_url')
         .eq('id', user.id)
         .maybeSingle()
       if (np) setProfile(np as Profile)
@@ -97,12 +98,12 @@ export default function MyPage() {
         const facilityIds = [...new Set((jobs ?? []).map((j: any) => j.facility_id))]
         const { data: facilities } = await supabase
           .from('facilities')
-          .select('user_id, facility_name, facility_type')
-          .in('user_id', facilityIds)
+          .select('id, facility_name, facility_type')
+          .in('id', facilityIds)
 
         setApplications(apps.map((app: any) => {
           const job = (jobs ?? []).find((j: any) => j.id === app.job_id)
-          const fac = (facilities ?? []).find((f: any) => f.user_id === job?.facility_id)
+          const fac = (facilities ?? []).find((f: any) => f.id === job?.facility_id)
           return {
             id: app.id, status: app.status, created_at: app.created_at, job_id: app.job_id,
             job_work_date: job?.work_date ?? '', job_time_from: job?.time_from ?? '',
@@ -121,9 +122,9 @@ export default function MyPage() {
           .from('jobs').select('id, work_date, wage_amount, facility_id').in('id', fJobIds)
         const fFacIds = [...new Set((fJobs ?? []).map((j: any) => j.facility_id))]
         const { data: fFacs } = await supabase
-          .from('facilities').select('user_id, facility_name, facility_type').in('user_id', fFacIds)
+          .from('facilities').select('id, facility_name, facility_type').in('id', fFacIds)
         setFavorites((fJobs ?? []).map((j: any) => {
-          const fac = (fFacs ?? []).find((f: any) => f.user_id === j.facility_id)
+          const fac = (fFacs ?? []).find((f: any) => f.id === j.facility_id)
           return { job_id: j.id, work_date: j.work_date, wage_amount: j.wage_amount, facility_name: fac?.facility_name ?? '—', facility_type: fac?.facility_type ?? '' }
         }))
       }
@@ -168,7 +169,6 @@ export default function MyPage() {
     await supabase.from('applications').update({ status: 'cancelled' }).eq('id', app.id)
     setApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: 'cancelled' } : a))
 
-    // 停止チェック
     if (cancelType === 'absent') {
       await supabase.from('nurse_profiles').update({ is_suspended: true }).eq('id', userId)
       alert('❌ 無断欠勤として記録されました。アカウントが停止されました。')
@@ -217,6 +217,11 @@ export default function MyPage() {
                 <span key={s} style={{ background: C.light, color: C.dark, padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{s}</span>
               ))}
             </div>
+            {profile?.license_url && (
+              <div style={{ marginTop: 8 }}>
+                <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>✅ 免許証提出済み</span>
+              </div>
+            )}
           </div>
 
           {reviewCount > 0 && (
@@ -358,15 +363,48 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
   const [gender, setGender] = useState(initial?.gender ?? '')
   const [areas, setAreas] = useState((initial?.areas ?? []).join('、'))
   const [skills, setSkills] = useState((initial?.skills ?? []).join('、'))
+  const [licenseUrl, setLicenseUrl] = useState(initial?.license_url ?? '')
+  const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+
+  const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+
+    setUploading(true)
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/license.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('licenses')
+      .upload(path, file, { upsert: true })
+
+    if (uploadError) {
+      alert('アップロードに失敗しました: ' + uploadError.message)
+      setUploading(false)
+      return
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('licenses')
+      .getPublicUrl(path)
+
+    // nurse_profilesにlicense_urlを保存
+    await supabase.from('nurse_profiles')
+      .update({ license_url: urlData.publicUrl })
+      .eq('id', userId)
+
+    setLicenseUrl(urlData.publicUrl)
+    setUploading(false)
+    alert('✅ 免許証をアップロードしました')
+  }
 
   const save = async () => {
     setSaving(true)
     setError('')
 
-    // userIdが未取得の場合は直接authから取得
     let resolvedUserId = userId
     if (!resolvedUserId) {
       const { data: { user } } = await supabase.auth.getUser()
@@ -382,7 +420,11 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
     const { data: existing } = await supabase
       .from('nurse_profiles').select('id').eq('id', resolvedUserId).maybeSingle()
 
-    const payload = { name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum, gender: gender || null }
+    const payload = {
+      name, license, experience_years: expYears,
+      areas: areasArr, skills: skillsArr,
+      age: ageNum, gender: gender || null,
+    }
 
     let err = null
     if (existing) {
@@ -395,7 +437,7 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
 
     if (err) { setError(err.message); setSaving(false); return }
 
-    onSaved({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum ?? undefined, gender: gender || undefined })
+    onSaved({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum ?? undefined, gender: gender || undefined, license_url: licenseUrl })
     setSaving(false)
     setDone(true)
     setTimeout(() => setDone(false), 2000)
@@ -447,9 +489,46 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
         <input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="東京都、神奈川県" />
       </div>
 
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label>
         <input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" />
+      </div>
+
+      {/* 免許証アップロード */}
+      <div style={{ marginBottom: 28, background: '#FBF7F7', borderRadius: 10, padding: 16, border: '1px solid #EDE0E0' }}>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>
+          看護師免許証
+        </label>
+        {licenseUrl ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>✅ 提出済み</span>
+            </div>
+            <label style={{
+              display: 'inline-block', padding: '8px 16px', borderRadius: 8,
+              border: '1.5px solid #E07070', color: '#E07070', fontSize: 13,
+              fontWeight: 600, cursor: 'pointer',
+            }}>
+              {uploading ? 'アップロード中...' : '📷 再アップロード'}
+              <input type="file" accept="image/*,.pdf" onChange={handleLicenseUpload} style={{ display: 'none' }} disabled={uploading} />
+            </label>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>
+              免許証の画像またはPDFをアップロードしてください。施設側が確認できます。
+            </div>
+            <label style={{
+              display: 'inline-block', padding: '10px 20px', borderRadius: 8,
+              background: '#E07070', color: '#fff', fontSize: 13,
+              fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer',
+              opacity: uploading ? 0.7 : 1,
+            }}>
+              {uploading ? 'アップロード中...' : '📷 免許証をアップロード'}
+              <input type="file" accept="image/*,.pdf" onChange={handleLicenseUpload} style={{ display: 'none' }} disabled={uploading} />
+            </label>
+          </div>
+        )}
       </div>
 
       {error && (
