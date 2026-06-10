@@ -15,6 +15,7 @@ type Job = {
   description: string
   is_urgent: boolean
   tags: string[]
+  status: string
   facilities: {
     id: string
     facility_name: string
@@ -30,6 +31,7 @@ export default function JobDetailPage() {
   const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [role, setRole] = useState<'nurse' | 'facility' | null>(null)
   const [message, setMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
   const [agreedPolicy, setAgreedPolicy] = useState(false)
@@ -41,8 +43,19 @@ export default function JobDetailPage() {
 
   const fetchUser = async () => {
     const { data } = await supabase.auth.getUser()
-    if (data.user) {
-      setUserId(data.user.id)
+    if (!data.user) return
+    setUserId(data.user.id)
+
+    // 施設か看護師か判定
+    const { data: facility } = await supabase
+      .from('facilities')
+      .select('id')
+      .eq('id', data.user.id)
+      .maybeSingle()
+    const userRole = facility ? 'facility' : 'nurse'
+    setRole(userRole)
+
+    if (userRole === 'nurse') {
       checkApplied(data.user.id)
     }
   }
@@ -68,13 +81,9 @@ export default function JobDetailPage() {
   }
 
   const handleApply = async () => {
-    if (!userId) {
-      router.push('/login')
-      return
-    }
+    if (!userId) { router.push('/login'); return }
     setApplying(true)
 
-    // 停止チェック
     const { data: nurseProfile } = await supabase
       .from('nurse_profiles')
       .select('is_suspended')
@@ -91,22 +100,15 @@ export default function JobDetailPage() {
       .insert({ job_id: id, nurse_id: userId })
 
     if (!error) {
-      const { data: facilityData } = await supabase
-        .from('facilities')
-        .select('email, facility_name')
-        .eq('id', job!.facilities.id)
-        .single()
-
       await fetch('/api/notify-application', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            facilityId: job!.facilities.id,
-            nurseId: userId,
-            jobId: id,
-          }),
-        })
-
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          facilityId: job!.facilities.id,
+          nurseId: userId,
+          jobId: id,
+        }),
+      })
       setApplied(true)
       setMessage('応募しました！施設からの連絡をお待ちください。')
     } else {
@@ -116,20 +118,128 @@ export default function JobDetailPage() {
   }
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: '#64748B' }}>
-      読み込み中...
-    </div>
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: '#64748B' }}>読み込み中...</div>
   )
 
   if (!job) return (
-    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: '#64748B' }}>
-      求人が見つかりませんでした
-    </div>
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: '#64748B' }}>求人が見つかりませんでした</div>
   )
+
+  const isFilled = job.status === 'filled'
+
+  // 応募エリアの表示内容を決定
+  const renderApplyArea = () => {
+    // 施設側は応募不可
+    if (role === 'facility') {
+      return (
+        <div style={{ textAlign: 'center', padding: '20px', background: '#F1F5F9', borderRadius: '10px' }}>
+          <div style={{ fontSize: '13px', color: '#64748B' }}>施設アカウントでは応募できません</div>
+        </div>
+      )
+    }
+
+    // 満員の場合
+    if (isFilled) {
+      return (
+        <div style={{ textAlign: 'center', padding: '20px', background: '#F1F5F9', borderRadius: '10px' }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</div>
+          <div style={{ fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>募集終了</div>
+          <div style={{ fontSize: '12px', color: '#94A3B8' }}>この求人は募集人数に達しました</div>
+        </div>
+      )
+    }
+
+    // 応募済み
+    if (applied) {
+      return (
+        <div style={{ textAlign: 'center', padding: '20px', background: '#FDF0F0', borderRadius: '10px' }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
+          <div style={{ fontWeight: '700', color: '#C45A5A' }}>応募済み</div>
+          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>施設からの返信をお待ちください</div>
+          <button
+            onClick={async () => {
+              const { data } = await supabase
+                .from('applications')
+                .select('id')
+                .eq('job_id', id)
+                .eq('nurse_id', userId)
+                .single()
+              if (data) router.push(`/chat/${data.id}`)
+            }}
+            style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '12px' }}
+          >
+            💬 施設とチャットする
+          </button>
+        </div>
+      )
+    }
+
+    // 確認画面
+    if (showConfirm) {
+      return (
+        <div style={{ background: '#FDF0F0', borderRadius: '10px', padding: '16px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#1A2235' }}>
+            応募前に確認してください
+          </div>
+          {[
+            `📅 勤務日：${job.work_date}`,
+            `⏰ 時間：${job.time_from}〜${job.time_to}`,
+            `📍 場所：${job.facilities?.address}`,
+            `💰 日給：¥${job.wage_amount.toLocaleString()}`,
+          ].map(item => (
+            <div key={item} style={{ fontSize: '13px', color: '#1A2235', padding: '4px 0', borderBottom: '1px solid #EDE0E0' }}>
+              {item}
+            </div>
+          ))}
+          <div style={{ marginTop: '12px', background: '#FFF7ED', borderRadius: '8px', padding: '12px', marginBottom: '12px', fontSize: '12px', lineHeight: '1.8', color: '#1A2235' }}>
+            <div style={{ fontWeight: '700', color: '#C45A5A', marginBottom: '6px' }}>【キャンセルポリシー】</div>
+            <div>✅ 勤務24時間前までのキャンセルは無料</div>
+            <div>⚠️ 勤務12時間前以降は直前キャンセルとして記録</div>
+            <div>❌ 無断欠勤・連絡不履行はアカウント停止</div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
+            <input
+              type='checkbox'
+              checked={agreedPolicy}
+              onChange={e => setAgreedPolicy(e.target.checked)}
+              style={{ marginTop: '2px', flexShrink: 0 }}
+            />
+            <span style={{ fontSize: '12px', color: '#1A2235', lineHeight: '1.6' }}>
+              キャンセルポリシーを確認し、確実に勤務できる場合のみ応募します
+            </span>
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => { setShowConfirm(false); setAgreedPolicy(false) }}
+              style={{ flex: 1, padding: '10px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+            >
+              戻る
+            </button>
+            <button
+              onClick={() => { setShowConfirm(false); handleApply() }}
+              disabled={applying || !agreedPolicy}
+              style={{ flex: 2, padding: '10px', background: applying || !agreedPolicy ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}
+            >
+              {applying ? '応募中...' : '確認しました・応募する'}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // 通常の応募ボタン
+    return (
+      <button
+        onClick={() => setShowConfirm(true)}
+        style={{ width: '100%', padding: '14px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}
+      >
+        この求人に応募する
+      </button>
+    )
+  }
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
-
       <button
         onClick={() => router.push('/jobs')}
         style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '16px' }}
@@ -138,9 +248,16 @@ export default function JobDetailPage() {
       </button>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
-
         <div>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '16px' }}>
+
+            {/* 満員バナー */}
+            {isFilled && (
+              <div style={{ background: '#64748B', color: '#fff', textAlign: 'center', padding: '8px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', fontWeight: '700' }}>
+                🎉 募集人数に達しました！ありがとうございます
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
                 <h1 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>
@@ -150,7 +267,7 @@ export default function JobDetailPage() {
                   {job.facilities?.address} · {job.facility_type}
                 </div>
               </div>
-              {job.is_urgent && (
+              {job.is_urgent && !isFilled && (
                 <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>
                   急募
                 </span>
@@ -191,7 +308,7 @@ export default function JobDetailPage() {
         <div style={{ position: 'sticky', top: '80px' }}>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '36px', fontWeight: '700', color: '#E07070' }}>
+              <div style={{ fontSize: '36px', fontWeight: '700', color: isFilled ? '#94A3B8' : '#E07070' }}>
                 ¥{job.wage_amount.toLocaleString()}
               </div>
               <div style={{ fontSize: '13px', color: '#64748B' }}>日給（税込・振込）</div>
@@ -203,85 +320,7 @@ export default function JobDetailPage() {
               </div>
             )}
 
-            {applied ? (
-              <div style={{ textAlign: 'center', padding: '20px', background: '#FDF0F0', borderRadius: '10px' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
-                <div style={{ fontWeight: '700', color: '#C45A5A' }}>応募済み</div>
-                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>施設からの返信をお待ちください</div>
-                <button
-                  onClick={async () => {
-                    const { data } = await supabase
-                      .from('applications')
-                      .select('id')
-                      .eq('job_id', id)
-                      .eq('nurse_id', userId)
-                      .single()
-                    if (data) router.push(`/chat/${data.id}`)
-                  }}
-                  style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '12px' }}
-                >
-                  💬 施設とチャットする
-                </button>
-              </div>
-            ) : showConfirm ? (
-              <div style={{ background: '#FDF0F0', borderRadius: '10px', padding: '16px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#1A2235' }}>
-                  応募前に確認してください
-                </div>
-                {[
-                  `📅 勤務日：${job.work_date}`,
-                  `⏰ 時間：${job.time_from}〜${job.time_to}`,
-                  `📍 場所：${job.facilities?.address}`,
-                  `💰 日給：¥${job.wage_amount.toLocaleString()}`,
-                ].map(item => (
-                  <div key={item} style={{ fontSize: '13px', color: '#1A2235', padding: '4px 0', borderBottom: '1px solid #EDE0E0' }}>
-                    {item}
-                  </div>
-                ))}
-
-                <div style={{ marginTop: '12px', background: '#FFF7ED', borderRadius: '8px', padding: '12px', marginBottom: '12px', fontSize: '12px', lineHeight: '1.8', color: '#1A2235' }}>
-                  <div style={{ fontWeight: '700', color: '#C45A5A', marginBottom: '6px' }}>【キャンセルポリシー】</div>
-                  <div>✅ 勤務24時間前までのキャンセルは無料</div>
-                  <div>⚠️ 勤務12時間前以降は直前キャンセルとして記録</div>
-                  <div>❌ 無断欠勤・連絡不履行はアカウント停止</div>
-                </div>
-
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
-                  <input
-                    type='checkbox'
-                    checked={agreedPolicy}
-                    onChange={e => setAgreedPolicy(e.target.checked)}
-                    style={{ marginTop: '2px', flexShrink: 0 }}
-                  />
-                  <span style={{ fontSize: '12px', color: '#1A2235', lineHeight: '1.6' }}>
-                    キャンセルポリシーを確認し、確実に勤務できる場合のみ応募します
-                  </span>
-                </label>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => { setShowConfirm(false); setAgreedPolicy(false) }}
-                    style={{ flex: 1, padding: '10px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
-                  >
-                    戻る
-                  </button>
-                  <button
-                    onClick={() => { setShowConfirm(false); handleApply() }}
-                    disabled={applying || !agreedPolicy}
-                    style={{ flex: 2, padding: '10px', background: applying || !agreedPolicy ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}
-                  >
-                    {applying ? '応募中...' : '確認しました・応募する'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowConfirm(true)}
-                style={{ width: '100%', padding: '14px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}
-              >
-                この求人に応募する
-              </button>
-            )}
+            {renderApplyArea()}
           </div>
         </div>
       </div>
