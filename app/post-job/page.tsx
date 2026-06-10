@@ -4,6 +4,21 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+type FormState = {
+  work_date: string
+  time_from: string
+  time_to: string
+  wage_type: string
+  wage_amount: string
+  facility_type: string
+  required_license: string
+  description: string
+  is_urgent: boolean
+  tags: string
+  required_count: number
+  address: string
+}
+
 export default function PostJobPage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
@@ -12,7 +27,8 @@ export default function PostJobPage() {
   const [showPolicy, setShowPolicy] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [facilityAddress, setFacilityAddress] = useState('')
-  const [form, setForm] = useState({
+  const [lastForm, setLastForm] = useState<FormState | null>(null)
+  const [form, setForm] = useState<FormState>({
     work_date: '',
     time_from: '08:00',
     time_to: '17:00',
@@ -45,7 +61,6 @@ export default function PostJobPage() {
 
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
-  // 時給×勤務時間の想定日給を計算
   const calcEstimate = () => {
     if (form.wage_type !== 'hourly' || !form.wage_amount || !form.time_from || !form.time_to) return null
     const [fh, fm] = form.time_from.split(':').map(Number)
@@ -108,11 +123,22 @@ export default function PostJobPage() {
           message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 ${wageLabel}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
         }),
       })
+      setLastForm({ ...form })
       setDone(true)
     } else {
       alert('投稿に失敗しました: ' + JSON.stringify(error))
     }
     setLoading(false)
+  }
+
+  // 別の日にコピーして再投稿
+  const handleCopy = () => {
+    if (!lastForm) return
+    setForm({ ...lastForm, work_date: '' })
+    setDone(false)
+    setAgreed(false)
+    // ページトップにスクロール
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const inp = { width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }
@@ -121,10 +147,40 @@ export default function PostJobPage() {
     <div style={{ maxWidth: '500px', margin: '80px auto', textAlign: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ fontSize: '56px', marginBottom: '20px' }}>🎉</div>
       <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px' }}>求人を投稿しました</h2>
-      <p style={{ color: '#64748B', lineHeight: '1.7', marginBottom: '28px' }}>看護師からの応募が来たらお知らせします。</p>
-      <button onClick={() => router.push('/dashboard')} style={{ width: '100%', padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>
-        ダッシュボードへ
-      </button>
+      <p style={{ color: '#64748B', lineHeight: '1.7', marginBottom: '28px' }}>
+        看護師からの応募が来たらお知らせします。
+      </p>
+
+      {/* 投稿内容サマリー */}
+      <div style={{ background: '#FBF7F7', borderRadius: '12px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
+        <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px', fontWeight: '600' }}>投稿した求人</div>
+        {[
+          ['📅 勤務日', lastForm?.work_date],
+          ['⏰ 時間', `${lastForm?.time_from}〜${lastForm?.time_to}`],
+          ['💰 給与', lastForm?.wage_type === 'hourly' ? `時給 ¥${parseInt(lastForm?.wage_amount || '0').toLocaleString()}` : `日給 ¥${parseInt(lastForm?.wage_amount || '0').toLocaleString()}`],
+        ].map(([label, value]) => (
+          <div key={String(label)} style={{ display: 'flex', gap: '8px', fontSize: '13px', padding: '4px 0', borderBottom: '1px solid #EDE0E0' }}>
+            <span style={{ color: '#64748B', minWidth: '80px' }}>{label}</span>
+            <span style={{ fontWeight: '600', color: '#1A2235' }}>{value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* 別の日にコピーボタン */}
+        <button
+          onClick={handleCopy}
+          style={{ width: '100%', padding: '14px', background: '#fff', color: '#E07070', border: '2px solid #E07070', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
+        >
+          📋 別の日にコピーして投稿する
+        </button>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{ width: '100%', padding: '14px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
+        >
+          ダッシュボードへ
+        </button>
+      </div>
     </div>
   )
 
@@ -162,7 +218,14 @@ export default function PostJobPage() {
       )}
 
       <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '20px' }}>← 戻る</button>
-      <h1 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '24px' }}>求人を投稿する</h1>
+
+      <h1 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '8px' }}>求人を投稿する</h1>
+      {lastForm && (
+        <div style={{ fontSize: '13px', color: '#E07070', fontWeight: '600', marginBottom: '20px' }}>
+          📋 前回の内容をコピーしました。勤務日を変更して投稿してください
+        </div>
+      )}
+      {!lastForm && <div style={{ marginBottom: '24px' }} />}
 
       <form onSubmit={handleSubmitClick} style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
 
@@ -182,22 +245,11 @@ export default function PostJobPage() {
           </div>
         </div>
 
-        {/* 給与タイプ切り替え */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '8px' }}>給与タイプ *</label>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[{ value: 'daily', label: '日給' }, { value: 'hourly', label: '時給' }].map(opt => (
-              <button
-                key={opt.value}
-                type='button'
-                onClick={() => set('wage_type', opt.value)}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-                  background: form.wage_type === opt.value ? '#E07070' : '#F1F5F9',
-                  color: form.wage_type === opt.value ? '#fff' : '#64748B',
-                  border: form.wage_type === opt.value ? 'none' : '1.5px solid #EDE0E0',
-                }}
-              >
+              <button key={opt.value} type='button' onClick={() => set('wage_type', opt.value)} style={{ flex: 1, padding: '10px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', background: form.wage_type === opt.value ? '#E07070' : '#F1F5F9', color: form.wage_type === opt.value ? '#fff' : '#64748B', border: form.wage_type === opt.value ? 'none' : '1.5px solid #EDE0E0' }}>
                 {opt.label}
               </button>
             ))}
@@ -209,7 +261,6 @@ export default function PostJobPage() {
             {form.wage_type === 'hourly' ? '時給（円・税込） *' : '日給（円・税込） *'}
           </label>
           <input type='number' required placeholder={form.wage_type === 'hourly' ? '2000' : '25000'} value={form.wage_amount} onChange={e => set('wage_amount', e.target.value)} style={inp} />
-          {/* 時給の場合は想定日給を表示 */}
           {form.wage_type === 'hourly' && estimate && (
             <div style={{ marginTop: '6px', fontSize: '13px', color: '#E07070', fontWeight: '600' }}>
               想定日給：¥{estimate.toLocaleString()}（{form.time_from}〜{form.time_to}の場合）
