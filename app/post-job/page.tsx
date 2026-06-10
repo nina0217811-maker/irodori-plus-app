@@ -11,6 +11,7 @@ export default function PostJobPage() {
   const [done, setDone] = useState(false)
   const [showPolicy, setShowPolicy] = useState(false)
   const [agreed, setAgreed] = useState(false)
+  const [facilityAddress, setFacilityAddress] = useState('')
   const [form, setForm] = useState({
     work_date: '',
     time_from: '08:00',
@@ -22,12 +23,23 @@ export default function PostJobPage() {
     is_urgent: false,
     tags: '',
     required_count: 1,
+    address: '',
   })
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login')
-      else setUserId(data.user.id)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { router.push('/login'); return }
+      setUserId(data.user.id)
+      // 施設の住所をデフォルト値として取得
+      const { data: facility } = await supabase
+        .from('facilities')
+        .select('address, facility_type')
+        .eq('id', data.user.id)
+        .maybeSingle()
+      if (facility?.address) {
+        setFacilityAddress(facility.address)
+        setForm(f => ({ ...f, address: facility.address, facility_type: facility.facility_type ?? '' }))
+      }
     })
   }, [])
 
@@ -59,6 +71,7 @@ export default function PostJobPage() {
       is_urgent: form.is_urgent,
       tags: tagsArray,
       required_count: form.required_count,
+      address: form.address || facilityAddress,
       status: 'open',
     })
 
@@ -70,7 +83,7 @@ export default function PostJobPage() {
         .maybeSingle()
 
       const facilityName = facilityData?.facility_name ?? ''
-      const address = facilityData?.address ?? ''
+      const address = form.address || facilityData?.address || ''
       const descriptionPreview = form.description.slice(0, 100) + (form.description.length > 100 ? '...' : '')
 
       await fetch('/api/line-notify', {
@@ -186,6 +199,22 @@ export default function PostJobPage() {
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>日給（円・税込） *</label>
           <input type='number' required placeholder='25000' value={form.wage_amount} onChange={e => set('wage_amount', e.target.value)}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>勤務地</label>
+          <input
+            type='text'
+            placeholder={facilityAddress || '例：那覇市おもろまち1-2-3'}
+            value={form.address}
+            onChange={e => set('address', e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+          />
+          {facilityAddress && (
+            <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
+              空欄の場合は施設住所（{facilityAddress}）が使われます
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: '16px' }}>
