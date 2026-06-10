@@ -524,7 +524,7 @@ export default function DashboardPage() {
             )}
 
             {/* 免許証確認ボタン */}
-           {profileModal.license_url && (
+        {profileModal.license_url && (
   <div style={{ marginBottom: '16px' }}>
     
       href={profileModal.license_url}
@@ -532,11 +532,10 @@ export default function DashboardPage() {
       rel="noopener noreferrer"
       style={{ display: 'inline-block', padding: '8px 16px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}
     >
-      📄 免許証を確認する
+      免許証を確認する
     </a>
   </div>
 )}
-
             {(() => {
               const cancel = profileModal.direct_cancel_count ?? 0
               const rating = profileModal.avg_rating ?? 0
