@@ -173,6 +173,36 @@ export default function MyPage() {
     setCancelling(null)
   }
 
+  const openGoogleCalendar = (app: Application) => {
+    const start = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_from.replace(':', '')}00`
+    const end = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_to.replace(':', '')}00`
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(app.facility_name + ' バイト')}&dates=${start}/${end}&details=${encodeURIComponent('irodori+ 採用確定\n日給: ¥' + app.job_wage.toLocaleString())}`
+    window.open(url, '_blank')
+  }
+
+  const downloadIcs = (app: Application) => {
+    const start = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_from.replace(':', '')}00`
+    const end = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_to.replace(':', '')}00`
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      `SUMMARY:${app.facility_name} バイト`,
+      `DTSTART:${start}`,
+      `DTEND:${end}`,
+      `DESCRIPTION:irodori+ 採用確定\\n日給: ¥${app.job_wage.toLocaleString()}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\n')
+    const blob = new Blob([ics], { type: 'text/calendar' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${app.facility_name}.ics`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // 想定収入計算
   const thisMonth = new Date()
   const monthlyIncome = applications
@@ -336,42 +366,19 @@ export default function MyPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                         <span style={{ background: st.bg, color: st.color, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{st.label}</span>
-{app.status === 'accepted' && (
+                        {app.status === 'accepted' && (
                           <Link href={`/chat/${app.id}`} style={{ fontSize: 12, color: C.primary, fontWeight: 600, textDecoration: 'none' }}>チャットを開く →</Link>
                         )}
                         {app.status === 'accepted' && (
                           <div style={{ display: 'flex', gap: 6 }}>
-                            
-                              href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(app.facility_name + ' バイト')}&dates=${app.job_work_date.replace(/-/g, '')}T${app.job_time_from.replace(':', '')}00/${app.job_work_date.replace(/-/g, '')}T${app.job_time_to.replace(':', '')}00&details=${encodeURIComponent('irodori+ 採用確定\n日給: ¥' + app.job_wage.toLocaleString())}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ padding: '3px 10px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: 6, fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+                            <button
+                              onClick={() => openGoogleCalendar(app)}
+                              style={{ padding: '3px 10px', background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                             >
                               Googleカレンダー
-                            </a>
+                            </button>
                             <button
-                              onClick={() => {
-                                const start = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_from.replace(':', '')}00`
-                                const end = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_to.replace(':', '')}00`
-                                const ics = [
-                                  'BEGIN:VCALENDAR',
-                                  'VERSION:2.0',
-                                  'BEGIN:VEVENT',
-                                  `SUMMARY:${app.facility_name} バイト`,
-                                  `DTSTART:${start}`,
-                                  `DTEND:${end}`,
-                                  `DESCRIPTION:irodori+ 採用確定\\n日給: ¥${app.job_wage.toLocaleString()}`,
-                                  'END:VEVENT',
-                                  'END:VCALENDAR',
-                                ].join('\n')
-                                const blob = new Blob([ics], { type: 'text/calendar' })
-                                const url = URL.createObjectURL(blob)
-                                const a = document.createElement('a')
-                                a.href = url
-                                a.download = `${app.facility_name}.ics`
-                                a.click()
-                                URL.revokeObjectURL(url)
-                              }}
+                              onClick={() => downloadIcs(app)}
                               style={{ padding: '3px 10px', background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                             >
                               .icsダウンロード
