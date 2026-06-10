@@ -16,6 +16,7 @@ export default function PostJobPage() {
     work_date: '',
     time_from: '08:00',
     time_to: '17:00',
+    wage_type: 'daily',
     wage_amount: '',
     facility_type: '',
     required_license: 'rn',
@@ -30,7 +31,6 @@ export default function PostJobPage() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push('/login'); return }
       setUserId(data.user.id)
-      // 施設の住所をデフォルト値として取得
       const { data: facility } = await supabase
         .from('facilities')
         .select('address, facility_type')
@@ -44,6 +44,18 @@ export default function PostJobPage() {
   }, [])
 
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
+
+  // 時給×勤務時間の想定日給を計算
+  const calcEstimate = () => {
+    if (form.wage_type !== 'hourly' || !form.wage_amount || !form.time_from || !form.time_to) return null
+    const [fh, fm] = form.time_from.split(':').map(Number)
+    const [th, tm] = form.time_to.split(':').map(Number)
+    const hours = (th * 60 + tm - fh * 60 - fm) / 60
+    if (hours <= 0) return null
+    return Math.round(parseInt(form.wage_amount) * hours)
+  }
+
+  const estimate = calcEstimate()
 
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,6 +76,7 @@ export default function PostJobPage() {
       work_date: form.work_date,
       time_from: form.time_from,
       time_to: form.time_to,
+      wage_type: form.wage_type,
       wage_amount: parseInt(form.wage_amount),
       facility_type: form.facility_type,
       required_license: form.required_license,
@@ -84,13 +97,15 @@ export default function PostJobPage() {
 
       const facilityName = facilityData?.facility_name ?? ''
       const address = form.address || facilityData?.address || ''
-      const descriptionPreview = form.description.slice(0, 100) + (form.description.length > 100 ? '...' : '')
+      const wageLabel = form.wage_type === 'hourly'
+        ? `時給 ¥${parseInt(form.wage_amount).toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}`
+        : `日給 ¥${parseInt(form.wage_amount).toLocaleString()}`
 
       await fetch('/api/line-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 日給 ¥${parseInt(form.wage_amount).toLocaleString()}\n📋 ${descriptionPreview}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 ${wageLabel}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
         }),
       })
       setDone(true)
@@ -100,17 +115,14 @@ export default function PostJobPage() {
     setLoading(false)
   }
 
+  const inp = { width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }
+
   if (done) return (
     <div style={{ maxWidth: '500px', margin: '80px auto', textAlign: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ fontSize: '56px', marginBottom: '20px' }}>🎉</div>
       <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px' }}>求人を投稿しました</h2>
-      <p style={{ color: '#64748B', lineHeight: '1.7', marginBottom: '28px' }}>
-        看護師からの応募が来たらお知らせします。
-      </p>
-      <button
-        onClick={() => router.push('/dashboard')}
-        style={{ width: '100%', padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}
-      >
+      <p style={{ color: '#64748B', lineHeight: '1.7', marginBottom: '28px' }}>看護師からの応募が来たらお知らせします。</p>
+      <button onClick={() => router.push('/dashboard')} style={{ width: '100%', padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>
         ダッシュボードへ
       </button>
     </div>
@@ -122,9 +134,7 @@ export default function PostJobPage() {
       {showPolicy && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#1A2235' }}>
-              求人掲載にあたって
-            </h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#1A2235' }}>求人掲載にあたって</h2>
             <div style={{ background: '#FDF0F0', borderRadius: '10px', padding: '16px', marginBottom: '16px', fontSize: '13px', lineHeight: '2', color: '#1A2235' }}>
               <div style={{ fontWeight: '700', marginBottom: '8px', color: '#C45A5A' }}>【施設側のキャンセルポリシー】</div>
               <div>✅ 勤務24時間前までのキャンセルは無料</div>
@@ -138,109 +148,94 @@ export default function PostJobPage() {
               <div>求人掲載停止・利用停止の措置を取る場合があります</div>
             </div>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '20px' }}>
-              <input
-                type='checkbox'
-                checked={agreed}
-                onChange={e => setAgreed(e.target.checked)}
-                style={{ marginTop: '2px', width: '16px', height: '16px', flexShrink: 0 }}
-              />
-              <span style={{ fontSize: '13px', color: '#1A2235', lineHeight: '1.6' }}>
-                上記のキャンセルポリシーおよび禁止事項を確認し、同意します
-              </span>
+              <input type='checkbox' checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: '2px', width: '16px', height: '16px', flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', color: '#1A2235', lineHeight: '1.6' }}>上記のキャンセルポリシーおよび禁止事項を確認し、同意します</span>
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => { setShowPolicy(false); setAgreed(false) }}
-                style={{ flex: 1, padding: '12px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                戻る
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!agreed || loading}
-                style={{ flex: 2, padding: '12px', background: !agreed || loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !agreed || loading ? 'not-allowed' : 'pointer' }}
-              >
-                同意して求人を掲載する
+              <button onClick={() => { setShowPolicy(false); setAgreed(false) }} style={{ flex: 1, padding: '12px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}>戻る</button>
+              <button onClick={handleSubmit} disabled={!agreed || loading} style={{ flex: 2, padding: '12px', background: !agreed || loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !agreed || loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? '投稿中...' : '同意して求人を掲載する'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <button
-        onClick={() => router.push('/dashboard')}
-        style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '20px' }}
-      >
-        ← 戻る
-      </button>
+      <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '20px' }}>← 戻る</button>
       <h1 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '24px' }}>求人を投稿する</h1>
 
       <form onSubmit={handleSubmitClick} style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
+
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>勤務日 *</label>
-          <input type='date' required value={form.work_date} onChange={e => set('work_date', e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+          <input type='date' required value={form.work_date} onChange={e => set('work_date', e.target.value)} style={inp} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
           <div>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>開始時間 *</label>
-            <input type='time' required value={form.time_from} onChange={e => set('time_from', e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+            <input type='time' required value={form.time_from} onChange={e => set('time_from', e.target.value)} style={inp} />
           </div>
           <div>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>終了時間 *</label>
-            <input type='time' required value={form.time_to} onChange={e => set('time_to', e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+            <input type='time' required value={form.time_to} onChange={e => set('time_to', e.target.value)} style={inp} />
+          </div>
+        </div>
+
+        {/* 給与タイプ切り替え */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '8px' }}>給与タイプ *</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[{ value: 'daily', label: '日給' }, { value: 'hourly', label: '時給' }].map(opt => (
+              <button
+                key={opt.value}
+                type='button'
+                onClick={() => set('wage_type', opt.value)}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                  background: form.wage_type === opt.value ? '#E07070' : '#F1F5F9',
+                  color: form.wage_type === opt.value ? '#fff' : '#64748B',
+                  border: form.wage_type === opt.value ? 'none' : '1.5px solid #EDE0E0',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>日給（円・税込） *</label>
-          <input type='number' required placeholder='25000' value={form.wage_amount} onChange={e => set('wage_amount', e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>勤務地</label>
-          <input
-            type='text'
-            placeholder={facilityAddress || '例：那覇市おもろまち1-2-3'}
-            value={form.address}
-            onChange={e => set('address', e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-          />
-          {facilityAddress && (
-            <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
-              空欄の場合は施設住所（{facilityAddress}）が使われます
+          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>
+            {form.wage_type === 'hourly' ? '時給（円・税込） *' : '日給（円・税込） *'}
+          </label>
+          <input type='number' required placeholder={form.wage_type === 'hourly' ? '2000' : '25000'} value={form.wage_amount} onChange={e => set('wage_amount', e.target.value)} style={inp} />
+          {/* 時給の場合は想定日給を表示 */}
+          {form.wage_type === 'hourly' && estimate && (
+            <div style={{ marginTop: '6px', fontSize: '13px', color: '#E07070', fontWeight: '600' }}>
+              想定日給：¥{estimate.toLocaleString()}（{form.time_from}〜{form.time_to}の場合）
             </div>
           )}
         </div>
 
         <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>勤務地</label>
+          <input type='text' placeholder={facilityAddress || '例：那覇市おもろまち1-2-3'} value={form.address} onChange={e => set('address', e.target.value)} style={inp} />
+          {facilityAddress && (
+            <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>空欄の場合は施設住所（{facilityAddress}）が使われます</div>
+          )}
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>施設種別 *</label>
-          <select required value={form.facility_type} onChange={e => set('facility_type', e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}>
+          <select required value={form.facility_type} onChange={e => set('facility_type', e.target.value)} style={{ ...inp, background: '#fff' }}>
             <option value=''>選択してください</option>
-            <option>病院</option>
-            <option>クリニック</option>
-            <option>介護老人保健施設</option>
-            <option>訪問看護</option>
-            <option>デイサービス</option>
-            <option>訪問入浴</option>
-            <option>グループホーム</option>
-            <option>特別養護老人ホーム</option>
-            <option>有料老人ホーム</option>
-            <option>障害者施設</option>
-            <option>保育園</option>
-            <option>その他</option>
+            {['病院','クリニック','介護老人保健施設','訪問看護','デイサービス','訪問入浴','グループホーム','特別養護老人ホーム','有料老人ホーム','障害者施設','保育園','その他'].map(o => <option key={o}>{o}</option>)}
           </select>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>必要資格 *</label>
-          <select required value={form.required_license} onChange={e => set('required_license', e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}>
+          <select required value={form.required_license} onChange={e => set('required_license', e.target.value)} style={{ ...inp, background: '#fff' }}>
             <option value='rn'>正看護師</option>
             <option value='lpn'>准看護師以上</option>
           </select>
@@ -248,26 +243,23 @@ export default function PostJobPage() {
 
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>業務内容 *</label>
-          <textarea required value={form.description} onChange={e => set('description', e.target.value)}
-            placeholder='業務内容、持ち物、注意点など...'
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', height: '100px', resize: 'vertical', boxSizing: 'border-box' }} />
+          <textarea required value={form.description} onChange={e => set('description', e.target.value)} placeholder='業務内容、持ち物、注意点など...' style={{ ...inp, height: '100px', resize: 'vertical' }} />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>タグ（スペース区切り）</label>
-          <input type='text' placeholder='夜勤なし 駅徒歩3分 交通費支給' value={form.tags} onChange={e => set('tags', e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+          <input type='text' placeholder='夜勤なし 駅徒歩3分 交通費支給' value={form.tags} onChange={e => set('tags', e.target.value)} style={inp} />
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600' }}>募集人数</label>
-          <input type='number' min='1' max='99' value={form.required_count} onChange={e => set('required_count', parseInt(e.target.value))}
-            style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          <span style={{ marginLeft: '8px' }}>名</span>
+          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px', color: '#64748B' }}>募集人数</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input type='number' min='1' max='99' value={form.required_count} onChange={e => set('required_count', parseInt(e.target.value))} style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '1.5px solid #EDE0E0', fontSize: '14px' }} />
+            <span style={{ color: '#64748B', fontSize: '14px' }}>名</span>
+          </div>
         </div>
 
-        <button type='submit' disabled={loading}
-          style={{ width: '100%', padding: '14px', background: loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <button type='submit' disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? '投稿中...' : '求人を投稿する'}
         </button>
         <div style={{ fontSize: '12px', color: '#64748B', textAlign: 'center', marginTop: '12px' }}>
