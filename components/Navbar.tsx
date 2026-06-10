@@ -74,7 +74,6 @@ export default function Navbar() {
     if (user && role) fetchUnreadCount(user.id, role === 'facility')
   }, [pathname])
 
-  // ハンバーガー開いてるときは背景スクロール禁止
   useEffect(() => {
     document.body.style.overflow = hamburgerOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -132,7 +131,7 @@ export default function Navbar() {
           <div style={{ flex: 1 }} />
 
           {/* PC用リンク */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }} className="pc-nav">
+          <div className="pc-nav" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             {links.map(l => (
               <Link key={l.href} href={l.href} style={{ textDecoration: 'none' }}>
                 <span style={{
@@ -161,36 +160,23 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* ハンバーガーボタン（スマホのみ） */}
+          {/* ハンバーガーボタン（スマホのみ・CSS側で表示切替） */}
           {user && (
             <button
               onClick={() => setHamburgerOpen(o => !o)}
               className="hamburger-btn"
-              style={{
-                display: 'none',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '8px',
-                flexDirection: 'column',
-                gap: '5px',
-                position: 'relative',
-              }}
               aria-label="メニュー"
             >
               {unreadCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: 4, right: 4,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: '#E07070', border: '1.5px solid #fff',
-                }} />
+                <span className="hamburger-badge" />
               )}
-              <span style={{ display: 'block', width: '22px', height: '2px', background: hamburgerOpen ? '#E07070' : '#64748B', borderRadius: '2px', transition: 'all 0.2s', transform: hamburgerOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
-              <span style={{ display: 'block', width: '22px', height: '2px', background: '#64748B', borderRadius: '2px', opacity: hamburgerOpen ? 0 : 1, transition: 'all 0.2s' }} />
-              <span style={{ display: 'block', width: '22px', height: '2px', background: hamburgerOpen ? '#E07070' : '#64748B', borderRadius: '2px', transition: 'all 0.2s', transform: hamburgerOpen ? 'translateY(-7px) rotate(-45deg)' : 'none' }} />
+              <span className={`hamburger-line ${hamburgerOpen ? 'line-top-open' : ''}`} />
+              <span className={`hamburger-line ${hamburgerOpen ? 'line-mid-open' : ''}`} />
+              <span className={`hamburger-line ${hamburgerOpen ? 'line-bot-open' : ''}`} />
             </button>
           )}
 
+          {/* PC用：未ログイン */}
           {!user ? (
             <div style={{ display: 'flex', gap: '8px' }}>
               <Link href="/login">
@@ -201,6 +187,7 @@ export default function Navbar() {
               </Link>
             </div>
           ) : (
+            /* PC用：アバターメニュー */
             <div style={{ position: 'relative' }} className="pc-nav">
               <div
                 onClick={() => setMenuOpen(o => !o)}
@@ -261,7 +248,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* スマホ用ハンバーガーメニュー */}
+      {/* オーバーレイ */}
       {hamburgerOpen && (
         <div
           style={{
@@ -271,14 +258,18 @@ export default function Navbar() {
           onClick={() => setHamburgerOpen(false)}
         />
       )}
-      <div style={{
-        position: 'fixed', top: '70px', left: 0, right: 0,
-        background: '#fff', borderBottom: '1px solid #EDE0E0',
-        zIndex: 99, padding: '16px 20px',
-        transform: hamburgerOpen ? 'translateY(0)' : 'translateY(-110%)',
-        transition: 'transform 0.25s ease',
-        display: 'none',
-      }} className="hamburger-menu">
+
+      {/* スマホ用ドロワー（CSS側で表示切替） */}
+      <div
+        className="hamburger-menu"
+        style={{
+          position: 'fixed', top: '70px', left: 0, right: 0,
+          background: '#fff', borderBottom: '1px solid #EDE0E0',
+          zIndex: 99, padding: '16px 20px',
+          transform: hamburgerOpen ? 'translateY(0)' : 'translateY(-110%)',
+          transition: 'transform 0.25s ease',
+        }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {links.map(l => (
             <div
@@ -315,6 +306,51 @@ export default function Navbar() {
       </div>
 
       <style>{`
+        /* PC：ハンバーガー系を隠す */
+        .hamburger-btn {
+          display: none;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          flex-direction: column;
+          gap: 5px;
+          position: relative;
+        }
+        .hamburger-menu {
+          display: none;
+        }
+        .hamburger-badge {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #E07070;
+          border: 1.5px solid #fff;
+        }
+        .hamburger-line {
+          display: block;
+          width: 22px;
+          height: 2px;
+          background: #64748B;
+          border-radius: 2px;
+          transition: all 0.2s;
+        }
+        .line-top-open {
+          background: #E07070;
+          transform: translateY(7px) rotate(45deg);
+        }
+        .line-mid-open {
+          opacity: 0;
+        }
+        .line-bot-open {
+          background: #E07070;
+          transform: translateY(-7px) rotate(-45deg);
+        }
+
+        /* スマホ：PCナビを隠してハンバーガー系を出す */
         @media (max-width: 768px) {
           .pc-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
