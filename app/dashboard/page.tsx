@@ -530,8 +530,7 @@ export default function DashboardPage() {
       href={profileModal.license_url}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ display: 'inline-block', padding: '8px 16px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}
-    >
+      style={{ display: 'inline-block', padding: '8px 16px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
       免許証を確認する
     </a>
   </div>
