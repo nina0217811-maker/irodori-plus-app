@@ -174,7 +174,8 @@ export default function DashboardPage() {
     if (jobData) {
       const acceptedCount = (jobData.applications as any[]).filter((a: any) => a.id === applicationId || a.status === 'accepted').length
       if (acceptedCount >= jobData.required_count) {
-        await supabase.from('jobs').update({ status: 'closed' }).eq('id', jobId)
+        // 定員に達したら filled に変更（求人一覧で満員御礼表示される）
+        await supabase.from('jobs').update({ status: 'filled' }).eq('id', jobId)
         const pendingNurseIds = (jobData.applications as any[]).filter((a: any) => a.status === 'pending' && a.id !== applicationId).map((a: any) => a.nurse_id)
         if (pendingNurseIds.length > 0) {
           await fetch('/api/notify-rejected', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseIds: pendingNurseIds, facilityName, jobId }) })
@@ -502,7 +503,13 @@ export default function DashboardPage() {
                   <div style={{ fontWeight: '600', marginBottom: '3px' }}>{job.work_date} · {job.time_from}〜{job.time_to}</div>
                   <div style={{ fontSize: '13px', color: '#64748B' }}>日給 ¥{job.wage_amount?.toLocaleString()} · {job.facility_type}</div>
                 </div>
-                <span style={{ background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9', color: job.status === 'open' ? '#065F46' : '#64748B', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>{job.status === 'open' ? '掲載中' : '終了'}</span>
+                <span style={{
+                  background: job.status === 'open' ? '#D1FAE5' : job.status === 'filled' ? '#DBEAFE' : '#F1F5F9',
+                  color: job.status === 'open' ? '#065F46' : job.status === 'filled' ? '#1E40AF' : '#64748B',
+                  padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600'
+                }}>
+                  {job.status === 'open' ? '掲載中' : job.status === 'filled' ? '満員' : '終了'}
+                </span>
                 <span style={{ background: '#FDF0F0', color: '#C45A5A', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' }}>応募 {job.applications?.length || 0}名</span>
                 {job.status === 'open' && (
                   <>
@@ -536,7 +543,7 @@ export default function DashboardPage() {
                             <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={{ padding: '6px 14px', background: '#FEF2F2', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>不採用</button>
                           )}
                           {isRejected && <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#94A3B8', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>不採用済み</span>}
-                          {isAccepted && <a href={`/chat/${app.id}`} style={{ padding: '6px 14px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>チャット</a>}
+                          {isAccepted && <button onClick={() => router.push(`/chat/${app.id}`)} style={{ padding: '6px 14px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>チャット</button>}
                           {isAccepted && !alreadyReviewed && (
                             <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })} style={{ padding: '6px 14px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>評価する</button>
                           )}
