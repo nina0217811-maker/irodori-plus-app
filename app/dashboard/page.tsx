@@ -47,6 +47,7 @@ type NurseProfile = {
   avg_rating?: number
   review_count?: number
   direct_cancel_count?: number
+  license_url?: string
 }
 
 const REJECT_REASONS = [
@@ -135,7 +136,7 @@ export default function DashboardPage() {
   const handleViewProfile = async (nurseId: string) => {
     const { data: np } = await supabase
       .from('nurse_profiles')
-      .select('name, license, experience_years, areas, skills, age, gender')
+      .select('name, license, experience_years, areas, skills, age, gender, license_url')
       .eq('id', nurseId)
       .single()
 
@@ -161,6 +162,7 @@ export default function DashboardPage() {
       avg_rating: avgRating,
       review_count: reviewData?.length ?? 0,
       direct_cancel_count: directCancelCount,
+      license_url: np?.license_url ?? undefined,
     })
   }
 
@@ -318,14 +320,7 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {REJECT_REASONS.map(reason => (
                   <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${rejectReason === reason ? '#E07070' : '#EDE0E0'}`, background: rejectReason === reason ? '#FDF0F0' : '#fff' }}>
-                    <input
-                      type='radio'
-                      name='rejectReason'
-                      value={reason}
-                      checked={rejectReason === reason}
-                      onChange={() => setRejectReason(reason)}
-                      style={{ accentColor: '#E07070' }}
-                    />
+                    <input type='radio' name='rejectReason' value={reason} checked={rejectReason === reason} onChange={() => setRejectReason(reason)} style={{ accentColor: '#E07070' }} />
                     <span style={{ fontSize: '14px', color: '#1A2235' }}>{reason}</span>
                   </label>
                 ))}
@@ -481,7 +476,7 @@ export default function DashboardPage() {
       {/* 看護師プロフィールモーダル */}
       {profileModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '700' }}>看護師プロフィール</h2>
               <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
@@ -497,6 +492,11 @@ export default function DashboardPage() {
                   {profileModal.age ? ` · ${profileModal.age}歳` : ''}
                   {profileModal.gender ? ` · ${profileModal.gender}` : ''}
                 </div>
+                {profileModal.license_url && (
+                  <div style={{ marginTop: '6px' }}>
+                    <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>✅ 免許証提出済み</span>
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
@@ -522,6 +522,21 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* 免許証確認ボタン */}
+            {profileModal.license_url && (
+              <div style={{ marginBottom: '16px' }}>
+                
+                  href={profileModal.license_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-block', padding: '8px 16px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}
+                >
+                  📄 免許証を確認する
+                </a>
+              </div>
+            )}
+
             {(() => {
               const cancel = profileModal.direct_cancel_count ?? 0
               const rating = profileModal.avg_rating ?? 0
