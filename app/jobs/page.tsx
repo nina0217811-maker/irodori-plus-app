@@ -16,6 +16,7 @@ type Job = {
   description: string
   is_urgent: boolean
   tags: string[]
+  status: string
   facility_name?: string
   address?: string
 }
@@ -49,10 +50,11 @@ export default function JobsPage() {
   }
 
   const fetchJobs = async () => {
+    // open（募集中）と filled（採用済み）の両方を取得
     const { data: jobData, error } = await supabase
       .from('jobs')
       .select('*')
-      .eq('status', 'open')
+      .in('status', ['open', 'filled'])
 
     if (error || !jobData) { setLoading(false); return }
 
@@ -71,8 +73,11 @@ export default function JobsPage() {
       address: facilityMap[j.facility_id]?.address ?? '',
     }))
 
-    // 新しい順に並べる
-    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    // open を先に、filled を後ろに。同じステータス内は新しい順
+    merged.sort((a, b) => {
+      if (a.status === b.status) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      return a.status === 'open' ? -1 : 1
+    })
 
     setJobs(merged)
     setLoading(false)
@@ -148,98 +153,123 @@ export default function JobsPage() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
           gap: '16px'
         }}>
-          {filtered.map(job => (
-            <div key={job.id} style={{ position: 'relative' }}>
-              <button
-                onClick={() => toggleFavorite(job.id)}
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  zIndex: 10,
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '22px',
-                  cursor: 'pointer',
-                  filter: favorites.includes(job.id) ? 'none' : 'grayscale(100%)',
-                  transition: 'transform 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.2)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-              >
-                {favorites.includes(job.id) ? '❤️' : '🤍'}
-              </button>
+          {filtered.map(job => {
+            const isFilled = job.status === 'filled'
+            return (
+              <div key={job.id} style={{ position: 'relative' }}>
 
-              <Link href={`/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{
-                  background: '#fff',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                  border: '1px solid #EDE0E0',
-                  cursor: 'pointer',
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingRight: '32px' }}>
-                    <div>
-                      <div style={{ fontWeight: '700', fontSize: '15px' }}>
-                        {job.facility_name}
+                {/* 満員御礼バナー */}
+                {isFilled && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    background: 'rgba(100, 116, 139, 0.85)',
+                    color: '#fff', textAlign: 'center',
+                    padding: '6px 0', fontSize: '13px', fontWeight: '700',
+                    borderRadius: '12px 12px 0 0', zIndex: 10,
+                    letterSpacing: '0.05em',
+                  }}>
+                    🎉 募集人数に達しました！ありがとうございます
+                  </div>
+                )}
+
+                {/* いいねボタン（募集中のみ） */}
+                {!isFilled && (
+                  <button
+                    onClick={() => toggleFavorite(job.id)}
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      zIndex: 10,
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '22px',
+                      cursor: 'pointer',
+                      filter: favorites.includes(job.id) ? 'none' : 'grayscale(100%)',
+                      transition: 'transform 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.2)')}
+                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    {favorites.includes(job.id) ? '❤️' : '🤍'}
+                  </button>
+                )}
+
+                <Link href={`/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div style={{
+                    background: isFilled ? '#F8FAFC' : '#fff',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    paddingTop: isFilled ? '44px' : '20px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    border: `1px solid ${isFilled ? '#CBD5E1' : '#EDE0E0'}`,
+                    cursor: 'pointer',
+                    opacity: isFilled ? 0.75 : 1,
+                    transition: 'transform 0.15s',
+                  }}
+                    onMouseEnter={e => { if (!isFilled) e.currentTarget.style.transform = 'translateY(-2px)' }}
+                    onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingRight: isFilled ? '0' : '32px' }}>
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '15px' }}>
+                          {job.facility_name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                          {job.facility_type}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                        {job.facility_type}
-                      </div>
+                      {job.is_urgent && !isFilled && (
+                        <span style={{
+                          background: '#FEE2E2', color: '#991B1B',
+                          padding: '2px 8px', borderRadius: '20px',
+                          fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap',
+                          height: 'fit-content'
+                        }}>急募</span>
+                      )}
                     </div>
-                    {job.is_urgent && (
-                      <span style={{
-                        background: '#FEE2E2', color: '#991B1B',
-                        padding: '2px 8px', borderRadius: '20px',
-                        fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap',
-                        height: 'fit-content'
-                      }}>急募</span>
+
+                    {job.address && (
+                      <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>
+                        📍 {job.address}
+                      </div>
                     )}
-                  </div>
 
-                  {job.address && (
-                    <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>
-                      📍 {job.address}
+                    <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
+                      📅 {job.work_date}　⏰ {job.time_from}〜{job.time_to}
                     </div>
-                  )}
 
-                  <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
-                    📅 {job.work_date}　⏰ {job.time_from}〜{job.time_to}
-                  </div>
+                    {job.tags && job.tags.length > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        {job.tags.map(tag => (
+                          <span key={tag} style={{
+                            background: '#F1F5F9', color: '#64748B',
+                            padding: '2px 8px', borderRadius: '20px', fontSize: '11px'
+                          }}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
 
-                  {job.tags && job.tags.length > 0 && (
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      {job.tags.map(tag => (
-                        <span key={tag} style={{
-                          background: '#F1F5F9', color: '#64748B',
-                          padding: '2px 8px', borderRadius: '20px', fontSize: '11px'
-                        }}>{tag}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ fontSize: '22px', fontWeight: '700', color: '#E07070' }}>
-                        ¥{job.wage_amount.toLocaleString()}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontSize: '22px', fontWeight: '700', color: isFilled ? '#94A3B8' : '#E07070' }}>
+                          ¥{job.wage_amount.toLocaleString()}
+                        </span>
+                        <span style={{ fontSize: '12px', color: '#64748B', marginLeft: '4px' }}>日給</span>
+                      </div>
+                      <span style={{
+                        background: isFilled ? '#F1F5F9' : '#FDF0F0',
+                        color: isFilled ? '#94A3B8' : '#C45A5A',
+                        padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600'
+                      }}>
+                        {job.facility_type}
                       </span>
-                      <span style={{ fontSize: '12px', color: '#64748B', marginLeft: '4px' }}>日給</span>
                     </div>
-                    <span style={{
-                      background: '#FDF0F0', color: '#C45A5A',
-                      padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600'
-                    }}>
-                      {job.facility_type}
-                    </span>
                   </div>
-                </div>
-              </Link>
-            </div>
-          ))}
+                </Link>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
