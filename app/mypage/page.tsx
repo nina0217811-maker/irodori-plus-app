@@ -50,7 +50,6 @@ const C = {
   dark: '#C45A5A',
   light: '#FDF0F0',
   teal: '#C0727A',
-  green: '#6BAF92',
   text: '#1A2235',
   sub: '#64748B',
   border: '#EDE0E0',
@@ -67,7 +66,7 @@ const STATUS: Record<string, { label: string; bg: string; color: string }> = {
 
 export default function MyPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'apps' | 'favs' | 'steps' | 'profile'>('apps')
+  const [tab, setTab] = useState<'apps' | 'favs' | 'calendar' | 'steps' | 'profile'>('apps')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
@@ -90,7 +89,6 @@ export default function MyPage() {
         .maybeSingle()
       if (np) setProfile(np as Profile)
 
-      // 口座情報取得
       const { data: bank } = await supabase
         .from('bank_accounts')
         .select('bank_name, branch_name, account_type, account_number, account_holder')
@@ -194,6 +192,7 @@ export default function MyPage() {
   const monthlyIncome = applications.filter(a => a.status === 'accepted' && a.job_work_date?.startsWith(`${thisMonth.getFullYear()}-${String(thisMonth.getMonth() + 1).padStart(2, '0')}`)).reduce((sum, a) => sum + (a.job_wage || 0), 0)
   const totalIncome = applications.filter(a => a.status === 'accepted').reduce((sum, a) => sum + (a.job_wage || 0), 0)
 
+  // カレンダー
   const year = calMonth.getFullYear()
   const month = calMonth.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
@@ -251,7 +250,7 @@ export default function MyPage() {
         </div>
 
         {/* 収入統計 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
           {[
             { label: '今月の想定収入', value: `¥${monthlyIncome.toLocaleString()}`, color: C.primary },
             { label: '累計バイト代', value: `¥${totalIncome.toLocaleString()}`, color: C.primary },
@@ -265,41 +264,12 @@ export default function MyPage() {
           ))}
         </div>
 
-        {/* カレンダー */}
-        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>勤務カレンダー</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button onClick={() => setCalMonth(new Date(year, month - 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.sub }}>←</button>
-              <div style={{ fontSize: 13, color: C.sub }}>{year}年{month + 1}月</div>
-              <button onClick={() => setCalMonth(new Date(year, month + 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.sub }}>→</button>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', marginBottom: 8 }}>
-            {['日','月','火','水','木','金','土'].map(d => <div key={d} style={{ fontSize: 11, color: C.sub, padding: '4px 0' }}>{d}</div>)}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-            {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const status = getDateStatus(day)
-              const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
-              let style: any = { width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontSize: 12 }
-              if (status === 'accepted') style = { ...style, background: C.primary, color: '#fff', fontWeight: 700 }
-              else if (status === 'pending') style = { ...style, background: '#FDF0F0', color: C.dark, fontWeight: 600 }
-              else if (isToday) style = { ...style, border: `1.5px solid ${C.primary}`, color: C.primary, fontWeight: 600 }
-              else style = { ...style, color: C.sub }
-              return <div key={day} style={style}>{day}</div>
-            })}
-          </div>
-        </div>
-
         {/* タブ */}
-        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 20 }}>
-          {(['apps', 'favs', 'steps', 'profile'] as const).map((key, i) => {
-            const labels = ['応募履歴', 'お気に入り', '登録状況', 'プロフィール']
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 20, overflowX: 'auto' }}>
+          {(['apps', 'favs', 'calendar', 'steps', 'profile'] as const).map((key, i) => {
+            const labels = ['応募履歴', 'お気に入り', 'カレンダー', '登録状況', 'プロフィール']
             return (
-              <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', padding: '12px 16px', fontWeight: tab === key ? 700 : 500, color: tab === key ? C.primary : C.sub, borderBottom: `2px solid ${tab === key ? C.primary : 'transparent'}`, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
+              <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', padding: '12px 16px', fontWeight: tab === key ? 700 : 500, color: tab === key ? C.primary : C.sub, borderBottom: `2px solid ${tab === key ? C.primary : 'transparent'}`, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                 {labels[i]}
               </button>
             )
@@ -360,6 +330,80 @@ export default function MyPage() {
                   </div>
                 ))}
               </div>
+        )}
+
+        {/* カレンダー */}
+        {tab === 'calendar' && (
+          <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>勤務カレンダー</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button onClick={() => setCalMonth(new Date(year, month - 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: C.sub }}>←</button>
+                <div style={{ fontSize: 14, color: C.sub, minWidth: 80, textAlign: 'center' }}>{year}年{month + 1}月</div>
+                <button onClick={() => setCalMonth(new Date(year, month + 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: C.sub }}>→</button>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', marginBottom: 8 }}>
+              {['日','月','火','水','木','金','土'].map(d => <div key={d} style={{ fontSize: 12, color: C.sub, padding: '4px 0', fontWeight: 600 }}>{d}</div>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+              {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1
+                const status = getDateStatus(day)
+                const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
+                const app = applications.find(a => {
+                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  return a.job_work_date === dateStr
+                })
+                let style: any = { width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontSize: 13, cursor: app ? 'pointer' : 'default', flexDirection: 'column' }
+                if (status === 'accepted') style = { ...style, background: C.primary, color: '#fff', fontWeight: 700 }
+                else if (status === 'pending') style = { ...style, background: '#FDF0F0', color: C.dark, fontWeight: 600, border: `1.5px solid ${C.primary}` }
+                else if (isToday) style = { ...style, border: `1.5px solid ${C.primary}`, color: C.primary, fontWeight: 600 }
+                else style = { ...style, color: C.sub }
+                return <div key={day} style={style}>{day}</div>
+              })}
+            </div>
+
+            {/* 凡例 */}
+            <div style={{ display: 'flex', gap: 16, marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+              {[
+                { color: C.primary, label: '採用確定' },
+                { color: '#FDF0F0', label: '審査中', border: `1.5px solid ${C.primary}` },
+              ].map(({ color, label, border }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.sub }}>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, border }} />
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* その月の採用確定一覧 */}
+            {(() => {
+              const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
+              const monthApps = applications.filter(a => a.status === 'accepted' && a.job_work_date?.startsWith(monthStr))
+              if (monthApps.length === 0) return null
+              return (
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>今月の採用確定 ({monthApps.length}件)</div>
+                  {monthApps.map(app => (
+                    <div key={app.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}`, fontSize: 13 }}>
+                      <div>
+                        <span style={{ fontWeight: 600 }}>{app.job_work_date}</span>
+                        <span style={{ color: C.sub, marginLeft: 8 }}>{app.facility_name}</span>
+                      </div>
+                      <span style={{ fontWeight: 700, color: C.primary }}>¥{app.job_wage.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>
+                      合計 ¥{monthApps.reduce((sum, a) => sum + a.job_wage, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
         )}
 
         {/* 登録状況 */}
@@ -458,21 +502,21 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
 
   const save = async () => {
     setSaving(true); setError('')
-    let resolvedUserId = userId
-    if (!resolvedUserId) {
+    let uid = userId
+    if (!uid) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setError('ログイン情報が取得できませんでした。'); setSaving(false); return }
-      resolvedUserId = user.id
+      uid = user.id
     }
     const areasArr = areas.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const skillsArr = skills.split(/[、,，]+/).map(s => s.trim()).filter(Boolean)
     const expYears = parseInt(years) || 0
     const ageNum = parseInt(age) || null
-    const { data: existing } = await supabase.from('nurse_profiles').select('id').eq('id', resolvedUserId).maybeSingle()
+    const { data: existing } = await supabase.from('nurse_profiles').select('id').eq('id', uid).maybeSingle()
     const payload = { name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum, gender: gender || null }
     let err = null
-    if (existing) { const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', resolvedUserId); err = e }
-    else { const { error: e } = await supabase.from('nurse_profiles').insert({ id: resolvedUserId, ...payload }); err = e }
+    if (existing) { const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', uid); err = e }
+    else { const { error: e } = await supabase.from('nurse_profiles').insert({ id: uid, ...payload }); err = e }
     if (err) { setError(err.message); setSaving(false); return }
     onSaved({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum ?? undefined, gender: gender || undefined, license_url: licenseUrl })
     setSaving(false); setDone(true); setTimeout(() => setDone(false), 2000)
@@ -496,11 +540,8 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* プロフィール編集 */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24 }}>プロフィール編集</h2>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>氏名</label>
           <input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="田中 みなみ" />
@@ -566,7 +607,6 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
         </button>
       </div>
 
-      {/* 口座情報 */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>振込口座情報</h2>
         <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>給与振込に使用する口座を登録してください。採用確定した施設の担当者のみ確認できます。</p>
@@ -601,7 +641,6 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
           {bankSaving ? '保存中...' : bankDone ? '保存しました！' : '口座情報を保存する'}
         </button>
       </div>
-
     </div>
   )
 }
