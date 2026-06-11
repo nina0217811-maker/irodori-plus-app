@@ -239,15 +239,29 @@ export default function MyPage() {
                 {(profile?.skills ?? []).map(s => <span key={s} style={{ background: C.light, color: C.dark, padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{s}</span>)}
               </div>
             </div>
-            <div style={{ textAlign: 'right', minWidth: 80 }}>
+            <div onClick={() => setTab('steps')} style={{ textAlign: 'right', minWidth: 80, cursor: 'pointer' }}>
               <div style={{ fontSize: 11, color: C.sub, marginBottom: 2 }}>プロフィール完成度</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: C.primary }}>{completionPct}%</div>
               <div style={{ width: 80, height: 6, background: '#EDE0E0', borderRadius: 3, marginTop: 4, overflow: 'hidden' }}>
                 <div style={{ width: `${completionPct}%`, height: '100%', background: C.primary, borderRadius: 3 }} />
               </div>
+              <div style={{ fontSize: 10, color: C.primary, marginTop: 3 }}>タップして確認 →</div>
             </div>
           </div>
         </div>
+
+        {/* 未完了バナー */}
+        {completionPct < 100 && (
+          <div
+            onClick={() => setTab('steps')}
+            style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '10px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          >
+            <div style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>
+              📋 登録があと{completionSteps.filter(s => !s.done).length}ステップ残っています
+            </div>
+            <span style={{ fontSize: 12, color: '#92400E', fontWeight: 600 }}>確認する →</span>
+          </div>
+        )}
 
         {/* 収入統計 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
