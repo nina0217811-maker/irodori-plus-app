@@ -36,6 +36,14 @@ type RegularJob = {
   status: string
 }
 
+type BankAccount = {
+  bank_name: string
+  branch_name: string
+  account_type: string
+  account_number: string
+  account_holder: string
+}
+
 type NurseProfile = {
   nurseId: string
   name: string
@@ -49,6 +57,7 @@ type NurseProfile = {
   review_count?: number
   direct_cancel_count?: number
   license_url?: string
+  bank_account?: BankAccount
 }
 
 const REJECT_REASONS = ['応募要件と合わなかった', '定員に達した', '求人を取り下げた', 'その他']
@@ -126,9 +135,10 @@ export default function DashboardPage() {
     const { data: np } = await supabase.from('nurse_profiles').select('name, license, experience_years, areas, skills, age, gender, license_url').eq('id', nurseId).single()
     const { data: reviewData } = await supabase.from('reviews').select('rating').eq('nurse_id', nurseId)
     const { data: cancelData } = await supabase.from('cancel_history').select('cancel_type').eq('nurse_id', nurseId)
+    const { data: bankData } = await supabase.from('bank_accounts').select('bank_name, branch_name, account_type, account_number, account_holder').eq('nurse_id', nurseId).maybeSingle()
     const avgRating = reviewData && reviewData.length > 0 ? Math.round(reviewData.reduce((s: number, r: any) => s + r.rating, 0) / reviewData.length * 10) / 10 : undefined
     const directCancelCount = (cancelData ?? []).filter((c: any) => c.cancel_type === 'direct' || c.cancel_type === 'absent').length
-    setProfileModal({ ...(np as NurseProfile), nurseId, avg_rating: avgRating, review_count: reviewData?.length ?? 0, direct_cancel_count: directCancelCount, license_url: np?.license_url ?? undefined })
+    setProfileModal({ ...(np as NurseProfile), nurseId, avg_rating: avgRating, review_count: reviewData?.length ?? 0, direct_cancel_count: directCancelCount, license_url: np?.license_url ?? undefined, bank_account: bankData ?? undefined })
   }
 
   const fetchData = async () => {
@@ -380,6 +390,30 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>直前キャンセル履歴</div>
               </div>
             </div>
+            {/* 口座情報 */}
+            {profileModal.bank_account ? (
+              <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px', border: '1px solid #BBF7D0' }}>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#065F46', marginBottom: '10px' }}>💳 振込口座情報</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {[
+                    ['銀行名', profileModal.bank_account.bank_name],
+                    ['支店名', profileModal.bank_account.branch_name],
+                    ['口座種別', profileModal.bank_account.account_type],
+                    ['口座番号', profileModal.bank_account.account_number],
+                    ['口座名義', profileModal.bank_account.account_holder],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '2px' }}>{label}</div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235' }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', fontSize: '12px', color: '#94A3B8' }}>
+                💳 口座情報未登録
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => { const name = profileModal.name ?? '不明'; const nurseId = profileModal.nurseId ?? ''; setProfileModal(null); setReportModal({ nurseId, nurseName: name }) }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #ef4444', color: '#ef4444', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>通報</button>
               <button onClick={() => setProfileModal(null)} style={{ flex: 2, padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
