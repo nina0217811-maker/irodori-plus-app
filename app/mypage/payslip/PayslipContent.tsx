@@ -70,14 +70,24 @@ export default function PayslipContent() {
   return (
     <>
       <style>{`
-        @media print { .no-print { display: none !important; } body { margin: 0; } nav, header { display: none !important; } @page { margin: 20mm; } }
+        * { box-sizing: border-box; }
         body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; }
+        .no-print { display: flex; }
+        @media print {
+          .no-print { display: none !important; }
+          body > *:not(#payslip-root) { display: none !important; }
+          #payslip-root { display: block !important; }
+          body { margin: 0; }
+          @page { margin: 20mm; size: A4; }
+        }
       `}</style>
-      <div className="no-print" style={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 8, zIndex: 100 }}>
+
+      <div className="no-print" style={{ position: 'fixed', top: 16, right: 16, gap: 8, zIndex: 9999 }}>
         <button onClick={() => window.print()} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>🖨️ 印刷・PDF保存</button>
-        <button onClick={() => window.close()} style={{ padding: '10px 20px', background: '#fff', color: '#64748B', border: '1px solid #EDE0E0', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>閉じる</button>
+        <button onClick={() => window.close()} style={{ marginLeft: 8, padding: '10px 20px', background: '#fff', color: '#64748B', border: '1px solid #EDE0E0', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>閉じる</button>
       </div>
-      <div style={{ maxWidth: 700, margin: '40px auto', padding: '40px 48px', background: '#fff' }}>
+
+      <div id="payslip-root" style={{ maxWidth: 700, margin: '40px auto', padding: '40px 48px', background: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, paddingBottom: 20, borderBottom: '2px solid #E07070' }}>
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#E07070', marginBottom: 4 }}>irodori+</div>
@@ -89,6 +99,7 @@ export default function PayslipContent() {
             <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>発行日：{issueDate}</div>
           </div>
         </div>
+
         <div style={{ marginBottom: 28, padding: '16px 20px', background: '#FBF7F7', borderRadius: 10, border: '1px solid #EDE0E0' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
@@ -101,6 +112,7 @@ export default function PayslipContent() {
             </div>
           </div>
         </div>
+
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#1A2235', marginBottom: 12 }}>勤務明細</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -128,6 +140,7 @@ export default function PayslipContent() {
             </tbody>
           </table>
         </div>
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 36 }}>
           <div style={{ background: '#FDF0F0', border: '1px solid #EDE0E0', borderRadius: 10, padding: '16px 24px', textAlign: 'right' }}>
             <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>合計支給額</div>
@@ -135,6 +148,7 @@ export default function PayslipContent() {
             <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>※振込予定額（税込）</div>
           </div>
         </div>
+
         <div style={{ borderTop: '1px solid #EDE0E0', paddingTop: 20, fontSize: 11, color: '#94A3B8', lineHeight: 1.8 }}>
           <div>※ 本明細書は irodori+ システムより自動発行されたものです。</div>
           <div>※ 給与の振込は各施設より直接行われます。</div>
