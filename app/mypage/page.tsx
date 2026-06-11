@@ -69,6 +69,7 @@ export default function MyPage() {
   const router = useRouter()
   const [tab, setTab] = useState<'apps' | 'favs' | 'steps' | 'profile'>('apps')
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const [userId, setUserId] = useState<string>('')
@@ -88,6 +89,14 @@ export default function MyPage() {
         .eq('id', user.id)
         .maybeSingle()
       if (np) setProfile(np as Profile)
+
+      // 口座情報取得
+      const { data: bank } = await supabase
+        .from('bank_accounts')
+        .select('bank_name, branch_name, account_type, account_number, account_holder')
+        .eq('nurse_id', user.id)
+        .maybeSingle()
+      if (bank) setBankAccount(bank as BankAccount)
 
       const { data: apps } = await supabase
         .from('applications')
@@ -177,8 +186,7 @@ export default function MyPage() {
     const ics = ['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',`SUMMARY:${app.facility_name} バイト`,`DTSTART:${start}`,`DTEND:${end}`,`DESCRIPTION:irodori+ 採用確定\\n日給: ¥${app.job_wage.toLocaleString()}`,'END:VEVENT','END:VCALENDAR'].join('\n')
     const blob = new Blob([ics], { type: 'text/calendar' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `${app.facility_name}.ics`; a.click()
+    const a = document.createElement('a'); a.href = url; a.download = `${app.facility_name}.ics`; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -199,10 +207,11 @@ export default function MyPage() {
   }
 
   const completionSteps = [
-    { label: '会員登録', done: true },
-    { label: 'プロフィール入力', done: !!(profile?.name && profile?.experience_years) },
-    { label: '看護師免許証', done: !!profile?.license_url },
-    { label: '初回バイト完了', done: applications.some(a => a.status === 'accepted') },
+    { label: '会員登録', done: true, action: null },
+    { label: 'プロフィール入力', done: !!(profile?.name && profile?.experience_years), action: 'profile' },
+    { label: '看護師免許証', done: !!profile?.license_url, action: 'profile' },
+    { label: '振込口座登録', done: !!(bankAccount?.bank_name && bankAccount?.account_number), action: 'profile' },
+    { label: '初回バイト完了', done: applications.some(a => a.status === 'accepted'), action: null },
   ]
   const completionPct = Math.round(completionSteps.filter(s => s.done).length / completionSteps.length * 100)
 
@@ -227,6 +236,7 @@ export default function MyPage() {
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 {profile?.license_url && <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>免許証提出済み</span>}
+                {bankAccount?.bank_name && <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>口座登録済み</span>}
                 {(profile?.skills ?? []).map(s => <span key={s} style={{ background: C.light, color: C.dark, padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{s}</span>)}
               </div>
             </div>
@@ -363,22 +373,29 @@ export default function MyPage() {
                   {step.done ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span> : <span style={{ color: C.sub, fontSize: 14 }}>{i + 1}</span>}
                 </div>
                 <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>{step.label}</div></div>
-                <span style={{ background: step.done ? '#D1FAE5' : '#F1F5F9', color: step.done ? '#065F46' : C.sub, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                  {step.done ? '完了' : '未完了'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {!step.done && step.action && (
+                    <button onClick={() => setTab(step.action as any)} style={{ padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.light, color: C.dark, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      登録する
+                    </button>
+                  )}
+                  <span style={{ background: step.done ? '#D1FAE5' : '#F1F5F9', color: step.done ? '#065F46' : C.sub, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                    {step.done ? '完了' : '未完了'}
+                  </span>
+                </div>
               </div>
             ))}
-            {!profile?.license_url && (
-              <button onClick={() => setTab('profile')} style={{ marginTop: 20, width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: C.primary, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
-                免許証をアップロードする
-              </button>
-            )}
           </div>
         )}
 
         {/* プロフィール編集 */}
         {tab === 'profile' && (
-          <ProfileForm userId={userId} initial={profile} onSaved={p => { setProfile(p); setTab('apps') }} />
+          <ProfileForm
+            userId={userId}
+            initial={profile}
+            initialBank={bankAccount}
+            onSaved={(p, b) => { setProfile(p); if (b) setBankAccount(b); setTab('apps') }}
+          />
         )}
 
       </div>
@@ -396,7 +413,12 @@ function Empty({ icon, text, href, linkLabel }: { icon: string; text: string; hr
   )
 }
 
-function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Profile | null; onSaved: (p: Profile) => void }) {
+function ProfileForm({ userId, initial, initialBank, onSaved }: {
+  userId: string
+  initial: Profile | null
+  initialBank: BankAccount | null
+  onSaved: (p: Profile, b?: BankAccount) => void
+}) {
   const [name, setName] = useState(initial?.name ?? '')
   const [license, setLicense] = useState(initial?.license ?? 'rn')
   const [years, setYears] = useState(String(initial?.experience_years ?? ''))
@@ -410,30 +432,14 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
 
-  // 口座情報
-  const [bankName, setBankName] = useState('')
-  const [branchName, setBranchName] = useState('')
-  const [accountType, setAccountType] = useState('普通')
-  const [accountNumber, setAccountNumber] = useState('')
-  const [accountHolder, setAccountHolder] = useState('')
+  const [bankName, setBankName] = useState(initialBank?.bank_name ?? '')
+  const [branchName, setBranchName] = useState(initialBank?.branch_name ?? '')
+  const [accountType, setAccountType] = useState(initialBank?.account_type ?? '普通')
+  const [accountNumber, setAccountNumber] = useState(initialBank?.account_number ?? '')
+  const [accountHolder, setAccountHolder] = useState(initialBank?.account_holder ?? '')
   const [bankSaving, setBankSaving] = useState(false)
   const [bankDone, setBankDone] = useState(false)
   const [bankError, setBankError] = useState('')
-  const [bankLoaded, setBankLoaded] = useState(false)
-
-  useEffect(() => {
-    if (!userId) return
-    supabase.from('bank_accounts').select('*').eq('nurse_id', userId).maybeSingle().then(({ data }) => {
-      if (data) {
-        setBankName(data.bank_name ?? '')
-        setBranchName(data.branch_name ?? '')
-        setAccountType(data.account_type ?? '普通')
-        setAccountNumber(data.account_number ?? '')
-        setAccountHolder(data.account_holder ?? '')
-      }
-      setBankLoaded(true)
-    })
-  }, [userId])
 
   const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -481,6 +487,8 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
     if (existing) { const { error: e } = await supabase.from('bank_accounts').update(payload).eq('nurse_id', userId); err = e }
     else { const { error: e } = await supabase.from('bank_accounts').insert(payload); err = e }
     if (err) { setBankError(err.message); setBankSaving(false); return }
+    const newBank: BankAccount = { bank_name: bankName, branch_name: branchName, account_type: accountType, account_number: accountNumber, account_holder: accountHolder }
+    onSaved({ name, license, experience_years: parseInt(years) || 0, areas: areas.split(/[、,，]+/).map(s => s.trim()).filter(Boolean), skills: skills.split(/[、,，]+/).map(s => s.trim()).filter(Boolean), license_url: licenseUrl }, newBank)
     setBankSaving(false); setBankDone(true); setTimeout(() => setBankDone(false), 2000)
   }
 
@@ -497,7 +505,6 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>氏名</label>
           <input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="田中 みなみ" />
         </div>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>資格</label>
           <select value={license} onChange={e => setLicense(e.target.value)} style={inp}>
@@ -505,7 +512,6 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
             <option value="lpn">准看護師</option>
           </select>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
           <div>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>年齢</label>
@@ -522,22 +528,18 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
             </select>
           </div>
         </div>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>経験年数</label>
           <input type="number" value={years} onChange={e => setYears(e.target.value)} style={inp} placeholder="8" />
         </div>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>活動エリア（読点区切り）</label>
           <input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="那覇市、浦添市" />
         </div>
-
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label>
           <input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" />
         </div>
-
         <div style={{ marginBottom: 28, background: '#FBF7F7', borderRadius: 10, padding: 16, border: '1px solid #EDE0E0' }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>看護師免許証</label>
           {licenseUrl ? (
@@ -558,9 +560,7 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
             </div>
           )}
         </div>
-
         {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>エラー: {error}</div>}
-
         <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
           {saving ? '保存中...' : done ? '保存しました！' : '保存する'}
         </button>
@@ -569,18 +569,15 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
       {/* 口座情報 */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>振込口座情報</h2>
-        <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>給与振込に使用する口座を登録してください。施設担当者のみ確認できます。</p>
-
+        <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>給与振込に使用する口座を登録してください。採用確定した施設の担当者のみ確認できます。</p>
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>銀行名</label>
           <input value={bankName} onChange={e => setBankName(e.target.value)} style={inp} placeholder="○○銀行" />
         </div>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>支店名</label>
           <input value={branchName} onChange={e => setBranchName(e.target.value)} style={inp} placeholder="那覇支店" />
         </div>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座種別</label>
           <select value={accountType} onChange={e => setAccountType(e.target.value)} style={inp}>
@@ -588,24 +585,18 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
             <option value="当座">当座</option>
           </select>
         </div>
-
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座番号</label>
           <input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} style={inp} placeholder="1234567" maxLength={8} />
         </div>
-
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座名義（カタカナ）</label>
           <input value={accountHolder} onChange={e => setAccountHolder(e.target.value)} style={inp} placeholder="タナカ ミナミ" />
         </div>
-
-        {/* セキュリティメモ */}
         <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 12, color: '#64748B', lineHeight: 1.7 }}>
-          🔒 口座情報は採用確定した施設の担当者のみ閲覧できます。irodoriスタッフも閲覧しません。
+          🔒 口座情報は採用確定した施設の担当者のみ閲覧できます。
         </div>
-
         {bankError && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>エラー: {bankError}</div>}
-
         <button onClick={saveBank} disabled={bankSaving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: bankDone ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
           {bankSaving ? '保存中...' : bankDone ? '保存しました！' : '口座情報を保存する'}
         </button>
