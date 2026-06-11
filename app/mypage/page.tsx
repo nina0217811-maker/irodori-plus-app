@@ -409,10 +409,16 @@ export default function MyPage() {
                       <span style={{ fontWeight: 700, color: C.primary }}>¥{app.job_wage.toLocaleString()}</span>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>
                       合計 ¥{monthApps.reduce((sum, a) => sum + a.job_wage, 0).toLocaleString()}
                     </span>
+                    <button
+                      onClick={() => window.open(`/mypage/payslip?year=${year}&month=${month + 1}&nurseId=${userId}`, '_blank')}
+                      style={{ padding: '6px 14px', background: C.primary, color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      📄 この月の明細をDL
+                    </button>
                   </div>
                 </div>
               )
