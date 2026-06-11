@@ -356,6 +356,9 @@ export default function Navbar() {
           .hamburger-btn { display: flex !important; }
           .hamburger-menu { display: block !important; }
         }
+        @media print {
+          nav { display: none !important; }
+        }
       `}</style>
     </>
   )
