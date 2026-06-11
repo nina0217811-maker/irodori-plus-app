@@ -16,6 +16,14 @@ type Profile = {
   license_url?: string
 }
 
+type BankAccount = {
+  bank_name: string
+  branch_name: string
+  account_type: string
+  account_number: string
+  account_holder: string
+}
+
 type Application = {
   id: string
   status: string
@@ -65,8 +73,6 @@ export default function MyPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const [userId, setUserId] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [avgRating, setAvgRating] = useState<number | null>(null)
-  const [reviewCount, setReviewCount] = useState(0)
   const [cancelling, setCancelling] = useState<string | null>(null)
   const [calMonth, setCalMonth] = useState(new Date())
 
@@ -91,17 +97,9 @@ export default function MyPage() {
 
       if (apps && apps.length > 0) {
         const jobIds = apps.map((a: any) => a.job_id)
-        const { data: jobs } = await supabase
-          .from('jobs')
-          .select('id, work_date, time_from, time_to, wage_amount, facility_id')
-          .in('id', jobIds)
-
+        const { data: jobs } = await supabase.from('jobs').select('id, work_date, time_from, time_to, wage_amount, facility_id').in('id', jobIds)
         const facilityIds = [...new Set((jobs ?? []).map((j: any) => j.facility_id))]
-        const { data: facilities } = await supabase
-          .from('facilities')
-          .select('id, facility_name, facility_type')
-          .in('id', facilityIds)
-
+        const { data: facilities } = await supabase.from('facilities').select('id, facility_name, facility_type').in('id', facilityIds)
         setApplications(apps.map((app: any) => {
           const job = (jobs ?? []).find((j: any) => j.id === app.job_id)
           const fac = (facilities ?? []).find((f: any) => f.id === job?.facility_id)
@@ -124,13 +122,6 @@ export default function MyPage() {
           const fac = (fFacs ?? []).find((f: any) => f.id === j.facility_id)
           return { job_id: j.id, work_date: j.work_date, wage_amount: j.wage_amount, facility_name: fac?.facility_name ?? '—', facility_type: fac?.facility_type ?? '' }
         }))
-      }
-
-      const { data: reviewData } = await supabase.from('reviews').select('rating').eq('nurse_id', user.id)
-      if (reviewData && reviewData.length > 0) {
-        const avg = reviewData.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewData.length
-        setAvgRating(Math.round(avg * 10) / 10)
-        setReviewCount(reviewData.length)
       }
 
       setLoading(false)
@@ -183,36 +174,18 @@ export default function MyPage() {
   const downloadIcs = (app: Application) => {
     const start = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_from.replace(':', '')}00`
     const end = `${app.job_work_date.replace(/-/g, '')}T${app.job_time_to.replace(':', '')}00`
-    const ics = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'BEGIN:VEVENT',
-      `SUMMARY:${app.facility_name} バイト`,
-      `DTSTART:${start}`,
-      `DTEND:${end}`,
-      `DESCRIPTION:irodori+ 採用確定\\n日給: ¥${app.job_wage.toLocaleString()}`,
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n')
+    const ics = ['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT',`SUMMARY:${app.facility_name} バイト`,`DTSTART:${start}`,`DTEND:${end}`,`DESCRIPTION:irodori+ 採用確定\\n日給: ¥${app.job_wage.toLocaleString()}`,'END:VEVENT','END:VCALENDAR'].join('\n')
     const blob = new Blob([ics], { type: 'text/calendar' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = `${app.facility_name}.ics`
-    a.click()
+    a.href = url; a.download = `${app.facility_name}.ics`; a.click()
     URL.revokeObjectURL(url)
   }
 
-  // 想定収入計算
   const thisMonth = new Date()
-  const monthlyIncome = applications
-    .filter(a => a.status === 'accepted' && a.job_work_date?.startsWith(`${thisMonth.getFullYear()}-${String(thisMonth.getMonth() + 1).padStart(2, '0')}`))
-    .reduce((sum, a) => sum + (a.job_wage || 0), 0)
-  const totalIncome = applications
-    .filter(a => a.status === 'accepted')
-    .reduce((sum, a) => sum + (a.job_wage || 0), 0)
+  const monthlyIncome = applications.filter(a => a.status === 'accepted' && a.job_work_date?.startsWith(`${thisMonth.getFullYear()}-${String(thisMonth.getMonth() + 1).padStart(2, '0')}`)).reduce((sum, a) => sum + (a.job_wage || 0), 0)
+  const totalIncome = applications.filter(a => a.status === 'accepted').reduce((sum, a) => sum + (a.job_wage || 0), 0)
 
-  // カレンダー
   const year = calMonth.getFullYear()
   const month = calMonth.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
@@ -222,11 +195,9 @@ export default function MyPage() {
   const getDateStatus = (day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const app = applications.find(a => a.job_work_date === dateStr)
-    if (!app) return null
-    return app.status
+    return app ? app.status : null
   }
 
-  // プロフィール完成度
   const completionSteps = [
     { label: '会員登録', done: true },
     { label: 'プロフィール入力', done: !!(profile?.name && profile?.experience_years) },
@@ -235,9 +206,7 @@ export default function MyPage() {
   ]
   const completionPct = Math.round(completionSteps.filter(s => s.done).length / completionSteps.length * 100)
 
-  if (loading) return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.sub }}>読み込み中...</div>
-  )
+  if (loading) return <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.sub }}>読み込み中...</div>
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', paddingBottom: 60 }}>
@@ -257,12 +226,8 @@ export default function MyPage() {
                 {profile?.areas?.length ? ` · ${profile.areas.join('・')}` : ''}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                {profile?.license_url && (
-                  <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>免許証提出済み</span>
-                )}
-                {(profile?.skills ?? []).map(s => (
-                  <span key={s} style={{ background: C.light, color: C.dark, padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{s}</span>
-                ))}
+                {profile?.license_url && <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>免許証提出済み</span>}
+                {(profile?.skills ?? []).map(s => <span key={s} style={{ background: C.light, color: C.dark, padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{s}</span>)}
               </div>
             </div>
             <div style={{ textAlign: 'right', minWidth: 80 }}>
@@ -275,7 +240,7 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* 収入・統計 */}
+        {/* 収入統計 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
           {[
             { label: '今月の想定収入', value: `¥${monthlyIncome.toLocaleString()}`, color: C.primary },
@@ -301,9 +266,7 @@ export default function MyPage() {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', marginBottom: 8 }}>
-            {['日', '月', '火', '水', '木', '金', '土'].map(d => (
-              <div key={d} style={{ fontSize: 11, color: C.sub, padding: '4px 0' }}>{d}</div>
-            ))}
+            {['日','月','火','水','木','金','土'].map(d => <div key={d} style={{ fontSize: 11, color: C.sub, padding: '4px 0' }}>{d}</div>)}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
             {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
@@ -311,24 +274,13 @@ export default function MyPage() {
               const day = i + 1
               const status = getDateStatus(day)
               const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
-              let style: any = { width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontSize: 12, cursor: 'default' }
-              if (status === 'accepted') { style = { ...style, background: C.primary, color: '#fff', fontWeight: 700 } }
-              else if (status === 'pending') { style = { ...style, background: '#FDF0F0', color: C.dark, fontWeight: 600 } }
-              else if (isToday) { style = { ...style, border: `1.5px solid ${C.primary}`, color: C.primary, fontWeight: 600 } }
-              else { style = { ...style, color: C.sub } }
+              let style: any = { width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontSize: 12 }
+              if (status === 'accepted') style = { ...style, background: C.primary, color: '#fff', fontWeight: 700 }
+              else if (status === 'pending') style = { ...style, background: '#FDF0F0', color: C.dark, fontWeight: 600 }
+              else if (isToday) style = { ...style, border: `1.5px solid ${C.primary}`, color: C.primary, fontWeight: 600 }
+              else style = { ...style, color: C.sub }
               return <div key={day} style={style}>{day}</div>
             })}
-          </div>
-          <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-            {[
-              { color: C.primary, label: '採用確定' },
-              { color: '#FDF0F0', label: '審査中', border: `1px solid ${C.primary}` },
-            ].map(({ color, label, border }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.sub }}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, border }} />
-                {label}
-              </div>
-            ))}
           </div>
         </div>
 
@@ -355,34 +307,16 @@ export default function MyPage() {
                     <div key={app.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: '16px 20px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{app.facility_name}</div>
-                        <div style={{ fontSize: 12, color: C.sub }}>
-                          {app.job_work_date} · {app.job_time_from}〜{app.job_time_to}
-                        </div>
-                        {app.job_wage > 0 && (
-                          <div style={{ fontSize: 14, fontWeight: 700, color: C.primary, marginTop: 4 }}>
-                            ¥{app.job_wage.toLocaleString()}
-                          </div>
-                        )}
+                        <div style={{ fontSize: 12, color: C.sub }}>{app.job_work_date} · {app.job_time_from}〜{app.job_time_to}</div>
+                        {app.job_wage > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: C.primary, marginTop: 4 }}>¥{app.job_wage.toLocaleString()}</div>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                         <span style={{ background: st.bg, color: st.color, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{st.label}</span>
-                        {app.status === 'accepted' && (
-                          <Link href={`/chat/${app.id}`} style={{ fontSize: 12, color: C.primary, fontWeight: 600, textDecoration: 'none' }}>チャットを開く →</Link>
-                        )}
+                        {app.status === 'accepted' && <Link href={`/chat/${app.id}`} style={{ fontSize: 12, color: C.primary, fontWeight: 600, textDecoration: 'none' }}>チャットを開く →</Link>}
                         {app.status === 'accepted' && (
                           <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                              onClick={() => openGoogleCalendar(app)}
-                              style={{ padding: '3px 10px', background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                            >
-                              Googleカレンダー
-                            </button>
-                            <button
-                              onClick={() => downloadIcs(app)}
-                              style={{ padding: '3px 10px', background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                            >
-                              .icsダウンロード
-                            </button>
+                            <button onClick={() => openGoogleCalendar(app)} style={{ padding: '3px 10px', background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Googleカレンダー</button>
+                            <button onClick={() => downloadIcs(app)} style={{ padding: '3px 10px', background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>.icsダウンロード</button>
                           </div>
                         )}
                         {(app.status === 'pending' || app.status === 'accepted') && (
@@ -426,19 +360,10 @@ export default function MyPage() {
             {completionSteps.map((step, i) => (
               <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < completionSteps.length - 1 ? `1px solid ${C.border}` : 'none' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 18, background: step.done ? '#D1FAE5' : '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {step.done
-                    ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span>
-                    : <span style={{ color: C.sub, fontSize: 14 }}>{i + 1}</span>
-                  }
+                  {step.done ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span> : <span style={{ color: C.sub, fontSize: 14 }}>{i + 1}</span>}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{step.label}</div>
-                </div>
-                <span style={{
-                  background: step.done ? '#D1FAE5' : '#F1F5F9',
-                  color: step.done ? '#065F46' : C.sub,
-                  padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600
-                }}>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>{step.label}</div></div>
+                <span style={{ background: step.done ? '#D1FAE5' : '#F1F5F9', color: step.done ? '#065F46' : C.sub, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                   {step.done ? '完了' : '未完了'}
                 </span>
               </div>
@@ -485,6 +410,31 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
 
+  // 口座情報
+  const [bankName, setBankName] = useState('')
+  const [branchName, setBranchName] = useState('')
+  const [accountType, setAccountType] = useState('普通')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [accountHolder, setAccountHolder] = useState('')
+  const [bankSaving, setBankSaving] = useState(false)
+  const [bankDone, setBankDone] = useState(false)
+  const [bankError, setBankError] = useState('')
+  const [bankLoaded, setBankLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!userId) return
+    supabase.from('bank_accounts').select('*').eq('nurse_id', userId).maybeSingle().then(({ data }) => {
+      if (data) {
+        setBankName(data.bank_name ?? '')
+        setBranchName(data.branch_name ?? '')
+        setAccountType(data.account_type ?? '普通')
+        setAccountNumber(data.account_number ?? '')
+        setAccountHolder(data.account_holder ?? '')
+      }
+      setBankLoaded(true)
+    })
+  }, [userId])
+
   const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !userId) return
@@ -501,8 +451,7 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
   }
 
   const save = async () => {
-    setSaving(true)
-    setError('')
+    setSaving(true); setError('')
     let resolvedUserId = userId
     if (!resolvedUserId) {
       const { data: { user } } = await supabase.auth.getUser()
@@ -516,106 +465,152 @@ function ProfileForm({ userId, initial, onSaved }: { userId: string; initial: Pr
     const { data: existing } = await supabase.from('nurse_profiles').select('id').eq('id', resolvedUserId).maybeSingle()
     const payload = { name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum, gender: gender || null }
     let err = null
-    if (existing) {
-      const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', resolvedUserId)
-      err = e
-    } else {
-      const { error: e } = await supabase.from('nurse_profiles').insert({ id: resolvedUserId, ...payload })
-      err = e
-    }
+    if (existing) { const { error: e } = await supabase.from('nurse_profiles').update(payload).eq('id', resolvedUserId); err = e }
+    else { const { error: e } = await supabase.from('nurse_profiles').insert({ id: resolvedUserId, ...payload }); err = e }
     if (err) { setError(err.message); setSaving(false); return }
     onSaved({ name, license, experience_years: expYears, areas: areasArr, skills: skillsArr, age: ageNum ?? undefined, gender: gender || undefined, license_url: licenseUrl })
-    setSaving(false)
-    setDone(true)
-    setTimeout(() => setDone(false), 2000)
+    setSaving(false); setDone(true); setTimeout(() => setDone(false), 2000)
+  }
+
+  const saveBank = async () => {
+    if (!bankName || !branchName || !accountNumber || !accountHolder) { setBankError('すべての項目を入力してください'); return }
+    setBankSaving(true); setBankError('')
+    const { data: existing } = await supabase.from('bank_accounts').select('id').eq('nurse_id', userId).maybeSingle()
+    const payload = { nurse_id: userId, bank_name: bankName, branch_name: branchName, account_type: accountType, account_number: accountNumber, account_holder: accountHolder, updated_at: new Date().toISOString() }
+    let err = null
+    if (existing) { const { error: e } = await supabase.from('bank_accounts').update(payload).eq('nurse_id', userId); err = e }
+    else { const { error: e } = await supabase.from('bank_accounts').insert(payload); err = e }
+    if (err) { setBankError(err.message); setBankSaving(false); return }
+    setBankSaving(false); setBankDone(true); setTimeout(() => setBankDone(false), 2000)
   }
 
   const inp = { width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: 8, fontSize: 14, color: '#1A2235', background: '#fff', fontFamily: 'inherit', outline: 'none' } as React.CSSProperties
 
   return (
-    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24 }}>プロフィール編集</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {[
-        { label: '氏名', value: name, setter: setName, placeholder: '田中 みなみ', type: 'text' },
-      ].map(f => (
-        <div key={f.label} style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>{f.label}</label>
-          <input value={f.value} onChange={e => f.setter(e.target.value)} style={inp} placeholder={f.placeholder} />
+      {/* プロフィール編集 */}
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24 }}>プロフィール編集</h2>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>氏名</label>
+          <input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="田中 みなみ" />
         </div>
-      ))}
 
-      <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>資格</label>
-        <select value={license} onChange={e => setLicense(e.target.value)} style={inp}>
-          <option value="rn">正看護師</option>
-          <option value="lpn">准看護師</option>
-        </select>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
-        <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>年齢</label>
-          <input type="number" value={age} onChange={e => setAge(e.target.value)} style={inp} placeholder="30" />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>性別</label>
-          <select value={gender} onChange={e => setGender(e.target.value)} style={inp}>
-            <option value="">選択してください</option>
-            <option value="女性">女性</option>
-            <option value="男性">男性</option>
-            <option value="その他">その他</option>
-            <option value="回答しない">回答しない</option>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>資格</label>
+          <select value={license} onChange={e => setLicense(e.target.value)} style={inp}>
+            <option value="rn">正看護師</option>
+            <option value="lpn">准看護師</option>
           </select>
         </div>
-      </div>
 
-      <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>経験年数</label>
-        <input type="number" value={years} onChange={e => setYears(e.target.value)} style={inp} placeholder="8" />
-      </div>
-
-      <div style={{ marginBottom: 18 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>活動エリア（読点区切り）</label>
-        <input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="那覇市、浦添市" />
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label>
-        <input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" />
-      </div>
-
-      <div style={{ marginBottom: 28, background: '#FBF7F7', borderRadius: 10, padding: 16, border: '1px solid #EDE0E0' }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>看護師免許証</label>
-        {licenseUrl ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
           <div>
-            <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, display: 'inline-block', marginBottom: 10 }}>提出済み</span>
-            <br />
-            <label style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 8, border: '1.5px solid #E07070', color: '#E07070', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              {uploading ? 'アップロード中...' : '再アップロード'}
-              <input type="file" accept="image/*,.pdf" onChange={handleLicenseUpload} style={{ display: 'none' }} disabled={uploading} />
-            </label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>年齢</label>
+            <input type="number" value={age} onChange={e => setAge(e.target.value)} style={inp} placeholder="30" />
           </div>
-        ) : (
           <div>
-            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>免許証の画像またはPDFをアップロードしてください。</div>
-            <label style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: '#E07070', color: '#fff', fontSize: 13, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
-              {uploading ? 'アップロード中...' : '免許証をアップロード'}
-              <input type="file" accept="image/*,.pdf" onChange={handleLicenseUpload} style={{ display: 'none' }} disabled={uploading} />
-            </label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>性別</label>
+            <select value={gender} onChange={e => setGender(e.target.value)} style={inp}>
+              <option value="">選択してください</option>
+              <option value="女性">女性</option>
+              <option value="男性">男性</option>
+              <option value="その他">その他</option>
+              <option value="回答しない">回答しない</option>
+            </select>
           </div>
-        )}
-      </div>
-
-      {error && (
-        <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
-          エラー: {error}
         </div>
-      )}
 
-      <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
-        {saving ? '保存中...' : done ? '保存しました！' : '保存する'}
-      </button>
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>経験年数</label>
+          <input type="number" value={years} onChange={e => setYears(e.target.value)} style={inp} placeholder="8" />
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>活動エリア（読点区切り）</label>
+          <input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="那覇市、浦添市" />
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label>
+          <input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" />
+        </div>
+
+        <div style={{ marginBottom: 28, background: '#FBF7F7', borderRadius: 10, padding: 16, border: '1px solid #EDE0E0' }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>看護師免許証</label>
+          {licenseUrl ? (
+            <div>
+              <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, display: 'inline-block', marginBottom: 10 }}>提出済み</span><br />
+              <label style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 8, border: '1.5px solid #E07070', color: '#E07070', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {uploading ? 'アップロード中...' : '再アップロード'}
+                <input type="file" accept="image/*,.pdf" onChange={handleLicenseUpload} style={{ display: 'none' }} disabled={uploading} />
+              </label>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>免許証の画像またはPDFをアップロードしてください。</div>
+              <label style={{ display: 'inline-block', padding: '10px 20px', borderRadius: 8, background: '#E07070', color: '#fff', fontSize: 13, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
+                {uploading ? 'アップロード中...' : '免許証をアップロード'}
+                <input type="file" accept="image/*,.pdf" onChange={handleLicenseUpload} style={{ display: 'none' }} disabled={uploading} />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>エラー: {error}</div>}
+
+        <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+          {saving ? '保存中...' : done ? '保存しました！' : '保存する'}
+        </button>
+      </div>
+
+      {/* 口座情報 */}
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>振込口座情報</h2>
+        <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>給与振込に使用する口座を登録してください。施設担当者のみ確認できます。</p>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>銀行名</label>
+          <input value={bankName} onChange={e => setBankName(e.target.value)} style={inp} placeholder="○○銀行" />
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>支店名</label>
+          <input value={branchName} onChange={e => setBranchName(e.target.value)} style={inp} placeholder="那覇支店" />
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座種別</label>
+          <select value={accountType} onChange={e => setAccountType(e.target.value)} style={inp}>
+            <option value="普通">普通</option>
+            <option value="当座">当座</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座番号</label>
+          <input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} style={inp} placeholder="1234567" maxLength={8} />
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座名義（カタカナ）</label>
+          <input value={accountHolder} onChange={e => setAccountHolder(e.target.value)} style={inp} placeholder="タナカ ミナミ" />
+        </div>
+
+        {/* セキュリティメモ */}
+        <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 12, color: '#64748B', lineHeight: 1.7 }}>
+          🔒 口座情報は採用確定した施設の担当者のみ閲覧できます。irodoriスタッフも閲覧しません。
+        </div>
+
+        {bankError && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>エラー: {bankError}</div>}
+
+        <button onClick={saveBank} disabled={bankSaving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: bankDone ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+          {bankSaving ? '保存中...' : bankDone ? '保存しました！' : '口座情報を保存する'}
+        </button>
+      </div>
+
     </div>
   )
 }
