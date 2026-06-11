@@ -16,6 +16,7 @@ type Job = {
   time_from: string
   time_to: string
   wage_amount: number
+  wage_type: string
   facility_type: string
   status: string
   is_urgent: boolean
@@ -50,12 +51,16 @@ type NurseProfile = {
   license_url?: string
 }
 
-const REJECT_REASONS = [
-  '応募要件と合わなかった',
-  '定員に達した',
-  '求人を取り下げた',
-  'その他',
-]
+const REJECT_REASONS = ['応募要件と合わなかった', '定員に達した', '求人を取り下げた', 'その他']
+
+const S = {
+  card: { background: '#fff', border: '0.5px solid #EDE0E0', borderRadius: '12px', padding: '16px 20px', marginBottom: '12px' } as React.CSSProperties,
+  badge: (bg: string, color: string) => ({ display: 'inline-flex', alignItems: 'center', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '500', background: bg, color } as React.CSSProperties),
+  btn: (bg: string, border: string, color: string) => ({ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: `1px solid ${border}`, background: bg, color, cursor: 'pointer', fontWeight: '500', fontFamily: 'inherit', whiteSpace: 'nowrap' } as React.CSSProperties),
+  row: { display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '0.5px solid #F1F5F9', gap: '10px' } as React.CSSProperties,
+  avatar: { width: '28px', height: '28px', borderRadius: '50%', background: '#FDF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '500', color: '#C45A5A', flexShrink: 0 } as React.CSSProperties,
+  divider: { height: '0.5px', background: '#EDE0E0', margin: '10px 0' } as React.CSSProperties,
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -88,11 +93,7 @@ export default function DashboardPage() {
   const handleSubscribe = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const res = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ facilityId: user.id, facilityName, email: user.email }),
-    })
+    const res = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ facilityId: user.id, facilityName, email: user.email }) })
     const { url } = await res.json()
     if (url) window.location.href = url
   }
@@ -116,13 +117,7 @@ export default function DashboardPage() {
 
   const handleRenotify = async (job: Job) => {
     setRenotifying(job.id)
-    await fetch('/api/line-notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: `【再募集】キャンセルが出ました！\n📅 ${job.work_date}\n⏰ ${job.time_from}〜${job.time_to}\n🏥 ${job.facility_type}\n💰 日給 ¥${job.wage_amount?.toLocaleString()}\n\n急募！求人を見る👇\nhttps://irodori0305.jp/jobs`,
-      }),
-    })
+    await fetch('/api/line-notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `【再募集】キャンセルが出ました！\n📅 ${job.work_date}\n⏰ ${job.time_from}〜${job.time_to}\n🏥 ${job.facility_type}\n💰 日給 ¥${job.wage_amount?.toLocaleString()}\n\n急募！求人を見る👇\nhttps://irodori0305.jp/jobs` }) })
     setRenotifying(null)
     alert('再募集通知を送りました！')
   }
@@ -174,7 +169,6 @@ export default function DashboardPage() {
     if (jobData) {
       const acceptedCount = (jobData.applications as any[]).filter((a: any) => a.id === applicationId || a.status === 'accepted').length
       if (acceptedCount >= jobData.required_count) {
-        // 定員に達したら filled に変更（求人一覧で満員御礼表示される）
         await supabase.from('jobs').update({ status: 'filled' }).eq('id', jobId)
         const pendingNurseIds = (jobData.applications as any[]).filter((a: any) => a.status === 'pending' && a.id !== applicationId).map((a: any) => a.nurse_id)
         if (pendingNurseIds.length > 0) {
@@ -203,49 +197,44 @@ export default function DashboardPage() {
     const { data: application } = await supabase.from('applications').select('id').eq('job_id', reviewModal.jobId).eq('nurse_id', reviewModal.nurseId).single()
     if (application) {
       const stars = '⭐'.repeat(rating)
-      const message = `${stars} 評価が届きました！\n評価：${rating} / 5${comment ? `\nコメント：${comment}` : ''}`
-      await supabase.from('messages').insert({ application_id: application.id, sender_id: userId, body: message })
+      await supabase.from('messages').insert({ application_id: application.id, sender_id: userId, body: `${stars} 評価が届きました！\n評価：${rating} / 5${comment ? `\nコメント：${comment}` : ''}` })
     }
     await fetch('/api/notify-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseId: reviewModal.nurseId, rating, comment, facilityName }) })
-    setReviewModal(null)
-    setRating(0)
-    setComment('')
-    setSubmitting(false)
+    setReviewModal(null); setRating(0); setComment(''); setSubmitting(false)
     fetchData()
   }
 
   const totalApplicants = jobs.reduce((sum, j) => sum + (j.applications?.length || 0), 0)
   const openJobs = jobs.filter(j => j.status === 'open')
+  const acceptedTotal = jobs.reduce((sum, j) => sum + (j.applications?.filter(a => a.status === 'accepted').length || 0), 0)
 
-  const btn = (label: string, onClick: () => void, style?: any) => (
-    <button onClick={onClick} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer', ...style }}>{label}</button>
-  )
+  const modalBase: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }
+  const modalBox: React.CSSProperties = { background: '#fff', borderRadius: '16px', padding: '28px', maxWidth: '440px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }
+  const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: '#fff', fontFamily: 'inherit' }
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
+      {/* ===== モーダル群 ===== */}
       {rejectModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>不採用通知を送る</h2>
+        <div style={modalBase}>
+          <div style={modalBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600' }}>不採用通知を送る</h2>
               <button onClick={() => { setRejectModal(null); setRejectReason('') }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{rejectModal.nurseName} さんに不採用通知を送ります</p>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '10px' }}>不採用の理由 *</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {REJECT_REASONS.map(reason => (
-                  <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${rejectReason === reason ? '#E07070' : '#EDE0E0'}`, background: rejectReason === reason ? '#FDF0F0' : '#fff' }}>
-                    <input type="radio" name="rejectReason" value={reason} checked={rejectReason === reason} onChange={() => setRejectReason(reason)} style={{ accentColor: '#E07070' }} />
-                    <span style={{ fontSize: '14px', color: '#1A2235' }}>{reason}</span>
-                  </label>
-                ))}
-              </div>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>{rejectModal.nurseName} さんに不採用通知を送ります</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {REJECT_REASONS.map(reason => (
+                <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${rejectReason === reason ? '#E07070' : '#EDE0E0'}`, background: rejectReason === reason ? '#FDF0F0' : '#fff' }}>
+                  <input type="radio" name="rejectReason" value={reason} checked={rejectReason === reason} onChange={() => setRejectReason(reason)} style={{ accentColor: '#E07070' }} />
+                  <span style={{ fontSize: '14px' }}>{reason}</span>
+                </label>
+              ))}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { setRejectModal(null); setRejectReason('') }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>キャンセル</button>
-              <button onClick={rejectNurse} disabled={!rejectReason || rejecting} style={{ flex: 2, padding: '10px', background: !rejectReason || rejecting ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !rejectReason || rejecting ? 'not-allowed' : 'pointer' }}>
+              <button onClick={() => { setRejectModal(null); setRejectReason('') }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B', fontFamily: 'inherit' }}>キャンセル</button>
+              <button onClick={rejectNurse} disabled={!rejectReason || rejecting} style={{ flex: 2, padding: '10px', background: !rejectReason || rejecting ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: !rejectReason || rejecting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                 {rejecting ? '送信中...' : '不採用通知を送る'}
               </button>
             </div>
@@ -254,57 +243,51 @@ export default function DashboardPage() {
       )}
 
       {editJobModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={modalBase}>
+          <div style={{ ...modalBox, maxWidth: '480px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>求人を編集</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: '600' }}>求人を編集</h2>
               <button onClick={() => setEditJobModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
-            {[
-              { label: '勤務日', type: 'date', key: 'work_date' },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>{f.label}</label>
-                <input type={f.type} value={(editJobForm as any)[f.key]} onChange={e => setEditJobForm(prev => ({ ...prev, [f.key]: e.target.value }))} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+            {[{ label: '勤務日', type: 'date', key: 'work_date' }].map(f => (
+              <div key={f.key} style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>{f.label}</label>
+                <input type={f.type} value={(editJobForm as any)[f.key]} onChange={e => setEditJobForm(prev => ({ ...prev, [f.key]: e.target.value }))} style={inp} />
               </div>
             ))}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
               {[{ label: '開始時間', key: 'time_from' }, { label: '終了時間', key: 'time_to' }].map(f => (
                 <div key={f.key}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>{f.label}</label>
-                  <input type="time" value={(editJobForm as any)[f.key]} onChange={e => setEditJobForm(prev => ({ ...prev, [f.key]: e.target.value }))} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>{f.label}</label>
+                  <input type="time" value={(editJobForm as any)[f.key]} onChange={e => setEditJobForm(prev => ({ ...prev, [f.key]: e.target.value }))} style={inp} />
                 </div>
               ))}
             </div>
-            {[
-              { label: '日給（円）', key: 'wage_amount', type: 'number' },
-              { label: '勤務地', key: 'address', type: 'text' },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>{f.label}</label>
-                <input type={f.type} value={(editJobForm as any)[f.key]} onChange={e => setEditJobForm(prev => ({ ...prev, [f.key]: e.target.value }))} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
+            {[{ label: '日給（円）', key: 'wage_amount', type: 'number' }, { label: '勤務地', key: 'address', type: 'text' }].map(f => (
+              <div key={f.key} style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>{f.label}</label>
+                <input type={f.type} value={(editJobForm as any)[f.key]} onChange={e => setEditJobForm(prev => ({ ...prev, [f.key]: e.target.value }))} style={inp} />
               </div>
             ))}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>施設種別</label>
-              <select value={editJobForm.facility_type} onChange={e => setEditJobForm(f => ({ ...f, facility_type: e.target.value }))} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' as const }}>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>施設種別</label>
+              <select value={editJobForm.facility_type} onChange={e => setEditJobForm(f => ({ ...f, facility_type: e.target.value }))} style={inp}>
                 <option value="">選択してください</option>
                 {['病院','クリニック','介護老人保健施設','訪問看護','デイサービス','訪問入浴','グループホーム','特別養護老人ホーム','有料老人ホーム','障害者施設','保育園','その他'].map(o => <option key={o}>{o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>業務内容</label>
-              <textarea value={editJobForm.description} onChange={e => setEditJobForm(f => ({ ...f, description: e.target.value }))} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', height: '100px', resize: 'vertical', boxSizing: 'border-box' as const }} />
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>業務内容</label>
+              <textarea value={editJobForm.description} onChange={e => setEditJobForm(f => ({ ...f, description: e.target.value }))} style={{ ...inp, height: '80px', resize: 'vertical' }} />
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setEditJobModal(null)} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>キャンセル</button>
+              <button onClick={() => setEditJobModal(null)} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B', fontFamily: 'inherit' }}>キャンセル</button>
               <button onClick={async () => {
                 setSavingJob(true)
                 const { error } = await supabase.from('jobs').update({ work_date: editJobForm.work_date, time_from: editJobForm.time_from, time_to: editJobForm.time_to, wage_amount: parseInt(editJobForm.wage_amount), address: editJobForm.address, facility_type: editJobForm.facility_type, description: editJobForm.description }).eq('id', editJobModal.id)
                 setSavingJob(false)
-                if (!error) { setEditJobModal(null); fetchData() }
-                else alert('保存に失敗しました: ' + error.message)
-              }} disabled={savingJob} style={{ flex: 2, padding: '10px', background: savingJob ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                if (!error) { setEditJobModal(null); fetchData() } else alert('保存に失敗しました')
+              }} disabled={savingJob} style={{ flex: 2, padding: '10px', background: savingJob ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                 {savingJob ? '保存中...' : '保存する'}
               </button>
             </div>
@@ -313,36 +296,33 @@ export default function DashboardPage() {
       )}
 
       {reportModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#ef4444' }}>通報する</h2>
+        <div style={modalBase}>
+          <div style={modalBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#ef4444' }}>通報する</h2>
               <button onClick={() => { setReportModal(null); setReportReason(''); setReportDetail('') }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{reportModal.nurseName} さんを通報します</p>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>通報理由 *</label>
-              <select value={reportReason} onChange={e => setReportReason(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box' as const }}>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '14px' }}>{reportModal.nurseName} さんを通報します</p>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>通報理由 *</label>
+              <select value={reportReason} onChange={e => setReportReason(e.target.value)} style={inp}>
                 <option value="">選択してください</option>
                 {['無断欠勤','虚偽情報','不適切な言動','その他'].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>詳細</label>
-              <textarea value={reportDetail} onChange={e => setReportDetail(e.target.value)} placeholder="詳しい状況を記入してください" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', height: '100px', resize: 'vertical', boxSizing: 'border-box' as const }} />
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>詳細</label>
+              <textarea value={reportDetail} onChange={e => setReportDetail(e.target.value)} placeholder="詳しい状況を記入してください" style={{ ...inp, height: '80px', resize: 'vertical' }} />
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { setReportModal(null); setReportReason(''); setReportDetail('') }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>キャンセル</button>
+              <button onClick={() => { setReportModal(null); setReportReason(''); setReportDetail('') }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B', fontFamily: 'inherit' }}>キャンセル</button>
               <button onClick={async () => {
                 if (!reportReason) { alert('通報理由を選択してください'); return }
                 setReporting(true)
                 await supabase.from('reports').insert({ facility_id: userId, nurse_id: reportModal.nurseId, reason: reportReason, detail: reportDetail })
-                setReporting(false)
-                setReportModal(null)
-                setReportReason('')
-                setReportDetail('')
+                setReporting(false); setReportModal(null); setReportReason(''); setReportDetail('')
                 alert('通報を受け付けました。運営が確認します。')
-              }} disabled={!reportReason || reporting} style={{ flex: 2, padding: '10px', background: !reportReason || reporting ? '#ccc' : '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !reportReason || reporting ? 'not-allowed' : 'pointer' }}>
+              }} disabled={!reportReason || reporting} style={{ flex: 2, padding: '10px', background: !reportReason || reporting ? '#ccc' : '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                 {reporting ? '送信中...' : '通報する'}
               </button>
             </div>
@@ -351,104 +331,75 @@ export default function DashboardPage() {
       )}
 
       {profileModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '700' }}>看護師プロフィール</h2>
+        <div style={{ ...modalBase, zIndex: 400 }}>
+          <div style={modalBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600' }}>看護師プロフィール</h2>
               <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 28, background: 'linear-gradient(135deg, #E07070, #C0727A)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}>
-                {profileModal.name?.charAt(0) ?? '?'}
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: 'linear-gradient(135deg, #E07070, #C0727A)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 600 }}>{profileModal.name?.charAt(0) ?? '?'}</div>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: '700' }}>{profileModal.name ?? '未設定'}</div>
-                <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
-                  {profileModal.license === 'rn' ? '正看護師' : '准看護師'}
-                  {profileModal.age ? ` · ${profileModal.age}歳` : ''}
-                  {profileModal.gender ? ` · ${profileModal.gender}` : ''}
+                <div style={{ fontSize: '16px', fontWeight: '600' }}>{profileModal.name ?? '未設定'}</div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                  {profileModal.license === 'rn' ? '正看護師' : '准看護師'}{profileModal.age ? ` · ${profileModal.age}歳` : ''}{profileModal.gender ? ` · ${profileModal.gender}` : ''}
                 </div>
-                {profileModal.license_url && (
-                  <div style={{ marginTop: '6px' }}>
-                    <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>免許証提出済み</span>
-                  </div>
-                )}
+                {profileModal.license_url && <span style={{ background: '#D1FAE5', color: '#065F46', padding: '1px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, display: 'inline-block', marginTop: 4 }}>免許証提出済み</span>}
               </div>
             </div>
-            <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {[['経験年数', profileModal.experience_years ? `${profileModal.experience_years}年` : '未設定'], ['活動エリア', profileModal.areas?.join('・') || '未設定']].map(([label, value]) => (
-                  <div key={label}>
-                    <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '3px' }}>{label}</div>
-                    <div style={{ fontSize: '14px', fontWeight: '600' }}>{value}</div>
-                  </div>
-                ))}
-              </div>
+            <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '14px', marginBottom: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {[['経験年数', profileModal.experience_years ? `${profileModal.experience_years}年` : '未設定'], ['活動エリア', profileModal.areas?.join('・') || '未設定']].map(([l, v]) => (
+                <div key={l}><div style={{ fontSize: '11px', color: '#64748B', marginBottom: '2px' }}>{l}</div><div style={{ fontSize: '13px', fontWeight: '600' }}>{v}</div></div>
+              ))}
             </div>
             {profileModal.skills?.length > 0 && (
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>スキル・経験</div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {profileModal.skills.map(s => <span key={s} style={{ background: '#FDF0F0', color: '#C45A5A', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>{s}</span>)}
-                </div>
+              <div style={{ marginBottom: '14px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {profileModal.skills.map(s => <span key={s} style={{ background: '#FDF0F0', color: '#C45A5A', padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500' }}>{s}</span>)}
               </div>
             )}
             {profileModal.license_url && (
-              <div style={{ marginBottom: '16px' }}>
-                <button
-                  onClick={() => window.open(profileModal.license_url, '_blank')}
-                  style={{ padding: '8px 16px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
-                >
-                  免許証を確認する
-                </button>
+              <div style={{ marginBottom: '14px' }}>
+                <button onClick={() => window.open(profileModal.license_url, '_blank')} style={{ padding: '7px 14px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '12px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>免許証を確認する</button>
               </div>
             )}
             {(() => {
-              const cancel = profileModal.direct_cancel_count ?? 0
-              const r = profileModal.avg_rating ?? 0
-              const rv = profileModal.review_count ?? 0
+              const cancel = profileModal.direct_cancel_count ?? 0; const r = profileModal.avg_rating ?? 0; const rv = profileModal.review_count ?? 0
               let rank = { label: 'ブロンズ', bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' }
               if (cancel >= 2) rank = { label: '要注意', bg: '#FEE2E2', color: '#991B1B', border: '#FCA5A5' }
               else if (cancel === 0 && r >= 4.0 && rv >= 3) rank = { label: 'ゴールド', bg: '#FEF9C3', color: '#92400E', border: '#F59E0B' }
               else if (cancel <= 1 && r >= 3.0) rank = { label: 'シルバー', bg: '#F1F5F9', color: '#475569', border: '#94A3B8' }
-              return (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: rank.bg, border: `1.5px solid ${rank.border}`, borderRadius: '20px', padding: '6px 16px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: rank.color }}>信頼ランク：{rank.label}</span>
-                  </div>
-                </div>
-              )
+              return <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: rank.bg, border: `1.5px solid ${rank.border}`, borderRadius: '20px', padding: '5px 14px' }}><span style={{ fontSize: '12px', fontWeight: '600', color: rank.color }}>信頼ランク：{rank.label}</span></div></div>
             })()}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
               <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#065F46' }}>{profileModal.avg_rating ? `${profileModal.avg_rating}` : '—'}</div>
-                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>平均評価（{profileModal.review_count}件）</div>
+                <div style={{ fontSize: '20px', fontWeight: '600', color: '#065F46' }}>{profileModal.avg_rating ?? '—'}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>平均評価（{profileModal.review_count}件）</div>
               </div>
               <div style={{ background: profileModal.direct_cancel_count && profileModal.direct_cancel_count > 0 ? '#FEF2F2' : '#F0FDF4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: profileModal.direct_cancel_count && profileModal.direct_cancel_count > 0 ? '#991B1B' : '#065F46' }}>{profileModal.direct_cancel_count ?? 0}回</div>
-                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>直前キャンセル履歴</div>
+                <div style={{ fontSize: '20px', fontWeight: '600', color: profileModal.direct_cancel_count && profileModal.direct_cancel_count > 0 ? '#991B1B' : '#065F46' }}>{profileModal.direct_cancel_count ?? 0}回</div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>直前キャンセル履歴</div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <button onClick={() => { const name = profileModal.name ?? '不明'; const nurseId = profileModal.nurseId ?? ''; setProfileModal(null); setReportModal({ nurseId, nurseName: name }) }} style={{ flex: 1, padding: '12px', background: 'none', border: '1.5px solid #ef4444', color: '#ef4444', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>通報</button>
-              <button onClick={() => setProfileModal(null)} style={{ flex: 2, padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>閉じる</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { const name = profileModal.name ?? '不明'; const nurseId = profileModal.nurseId ?? ''; setProfileModal(null); setReportModal({ nurseId, nurseName: name }) }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #ef4444', color: '#ef4444', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>通報</button>
+              <button onClick={() => setProfileModal(null)} style={{ flex: 2, padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
             </div>
           </div>
         </div>
       )}
 
       {reviewModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>看護師を評価する</h2>
-            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>{reviewModal.nurseName}</p>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', justifyContent: 'center' }}>
-              {[1, 2, 3, 4, 5].map(s => <span key={s} onClick={() => setRating(s)} style={{ fontSize: '36px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.3 }}>⭐</span>)}
+        <div style={{ ...modalBase, zIndex: 300 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '380px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '6px' }}>看護師を評価する</h2>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>{reviewModal.nurseName}</p>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'center' }}>
+              {[1,2,3,4,5].map(s => <span key={s} onClick={() => setRating(s)} style={{ fontSize: '32px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.25 }}>⭐</span>)}
             </div>
-            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="コメント（任意）" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', height: '80px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }} />
+            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="コメント（任意）" style={{ ...inp, height: '70px', resize: 'vertical', marginBottom: '14px' }} />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { setReviewModal(null); setRating(0); setComment('') }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B' }}>キャンセル</button>
-              <button onClick={submitReview} disabled={rating === 0 || submitting} style={{ flex: 1, padding: '10px', background: rating === 0 ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: rating === 0 ? 'not-allowed' : 'pointer' }}>
+              <button onClick={() => { setReviewModal(null); setRating(0); setComment('') }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B', fontFamily: 'inherit' }}>キャンセル</button>
+              <button onClick={submitReview} disabled={rating === 0 || submitting} style={{ flex: 1, padding: '10px', background: rating === 0 ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: rating === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                 {submitting ? '送信中...' : '評価する'}
               </button>
             </div>
@@ -456,131 +407,136 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      {/* ===== ヘッダー ===== */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700' }}>施設ダッシュボード</h1>
+          <h1 style={{ fontSize: '20px', fontWeight: '600' }}>施設ダッシュボード</h1>
           <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => router.push('/post-job')} style={{ padding: '10px 20px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>＋ 単発求人を投稿</button>
-          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '10px 20px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>＋ 常勤・パートを投稿</button>
+          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '8px 16px', background: '#fff', color: '#E07070', border: '1px solid #E07070', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 常勤・パート</button>
+          <button onClick={() => router.push('/post-job')} style={{ padding: '8px 16px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 単発求人を投稿</button>
           {userId === '2f22fea3-4f1f-4fac-9053-1f8d4b14f523' && (
-            <button onClick={() => router.push('/admin/dashboard')} style={{ padding: '10px 20px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>管理画面</button>
+            <button onClick={() => router.push('/admin/dashboard')} style={{ padding: '8px 16px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>管理画面</button>
           )}
         </div>
       </div>
 
-      <div style={{ background: 'linear-gradient(135deg, #6B2D2D, #C0727A)', borderRadius: '12px', padding: '20px', marginBottom: '20px', color: '#fff', display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <span style={{ background: '#10B981', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>掲載中</span>
-        <button onClick={handleSubscribe} style={{ padding: '8px 16px', background: '#fff', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>プランを購入</button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
-        {[['掲載中の求人', openJobs.length, '📋'], ['総応募者数', totalApplicants, '👩‍⚕️'], ['総求人数', jobs.length, '✅']].map(([l, v, ic]) => (
-          <div key={String(l)} style={{ background: '#fff', borderRadius: '12px', padding: '16px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
-            <div style={{ fontSize: '22px', marginBottom: '6px' }}>{ic}</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#E07070' }}>{v}</div>
+      {/* ===== 統計 ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+        {[['掲載中の求人', openJobs.length], ['総応募者数', totalApplicants], ['採用確定', acceptedTotal]].map(([l, v]) => (
+          <div key={String(l)} style={{ background: '#FBF7F7', border: '0.5px solid #EDE0E0', borderRadius: '10px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: '#C45A5A' }}>{v}</div>
             <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{l}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '15px' }}>掲載中の求人</div>
+      {/* ===== 単発求人リスト ===== */}
+      <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>掲載中の求人</div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>読み込み中...</div>
       ) : jobs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B', marginBottom: '24px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
+        <div style={{ textAlign: 'center', padding: '48px', background: '#fff', borderRadius: '12px', border: '0.5px solid #EDE0E0', color: '#64748B', marginBottom: '24px' }}>
+          <div style={{ fontSize: '32px', marginBottom: '10px' }}>📋</div>
           <div style={{ fontWeight: '600', marginBottom: '8px' }}>まだ求人がありません</div>
-          <button onClick={() => router.push('/post-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>最初の求人を投稿する</button>
+          <button onClick={() => router.push('/post-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginTop: '8px', fontFamily: 'inherit' }}>最初の求人を投稿する</button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          {jobs.map(job => (
-            <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: job.applications?.length > 0 ? '12px' : '0' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '3px' }}>{job.work_date} · {job.time_from}〜{job.time_to}</div>
-                  <div style={{ fontSize: '13px', color: '#64748B' }}>日給 ¥{job.wage_amount?.toLocaleString()} · {job.facility_type}</div>
+        <div style={{ marginBottom: '28px' }}>
+          {jobs.map(job => {
+            const wageLabel = (job.wage_type === 'hourly' ? '時給' : '日給') + ` ¥${job.wage_amount?.toLocaleString()}`
+            const statusLabel = job.status === 'open' ? '掲載中' : job.status === 'filled' ? '満員' : '終了'
+            const statusStyle = job.status === 'open'
+              ? S.badge('#FDF0F0', '#991B1B')
+              : job.status === 'filled'
+              ? S.badge('#EDE9FB', '#3C3489')
+              : S.badge('#F1F5F9', '#475569')
+            const borderLeft = job.status === 'open' ? '3px solid #E07070' : job.status === 'filled' ? '3px solid #7F77DD' : '3px solid #CBD5E1'
+
+            return (
+              <div key={job.id} style={{ ...S.card, borderLeft, borderRadius: '0 12px 12px 0' }}>
+                {/* 求人ヘッダー */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '600' }}>{job.work_date}　{job.time_from}〜{job.time_to}</span>
+                      <span style={statusLabel === '掲載中' ? S.badge('#FDF0F0', '#991B1B') : statusLabel === '満員' ? S.badge('#EDE9FB', '#3C3489') : S.badge('#F1F5F9', '#475569')}>{statusLabel}</span>
+                      <span style={S.badge('#FEF3DC', '#7A4D00')}>応募 {job.applications?.length || 0}名</span>
+                      {job.is_urgent && job.status === 'open' && <span style={S.badge('#FEE2E2', '#991B1B')}>急募</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '5px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                      <span>{wageLabel}</span>
+                      <span>{job.facility_type}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
+                    {job.status === 'open' && (
+                      <>
+                        <button onClick={() => closeJob(job.id)} style={S.btn('#fff', '#CBD5E1', '#475569')}>終了する</button>
+                        <button onClick={() => handleRenotify(job)} disabled={renotifying === job.id} style={S.btn('#FFF7ED', '#FED7AA', '#C2410C')}>{renotifying === job.id ? '送信中...' : '再募集通知'}</button>
+                      </>
+                    )}
+                    <button onClick={() => { setEditJobModal(job); setEditJobForm({ work_date: job.work_date, time_from: job.time_from, time_to: job.time_to, wage_amount: String(job.wage_amount), address: (job as any).address ?? '', facility_type: job.facility_type, description: (job as any).description ?? '' }) }} style={S.btn('#EFF6FF', '#93C5FD', '#1D4ED8')}>編集</button>
+                    <button onClick={() => handleDeleteJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
+                  </div>
                 </div>
-                <span style={{
-                  background: job.status === 'open' ? '#D1FAE5' : job.status === 'filled' ? '#DBEAFE' : '#F1F5F9',
-                  color: job.status === 'open' ? '#065F46' : job.status === 'filled' ? '#1E40AF' : '#64748B',
-                  padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600'
-                }}>
-                  {job.status === 'open' ? '掲載中' : job.status === 'filled' ? '満員' : '終了'}
-                </span>
-                <span style={{ background: '#FDF0F0', color: '#C45A5A', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' }}>応募 {job.applications?.length || 0}名</span>
-                {job.status === 'open' && (
+
+                {/* 応募者リスト */}
+                {job.applications?.length > 0 && (
                   <>
-                    <button onClick={() => closeJob(job.id)} style={{ padding: '6px 14px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', color: '#64748B' }}>終了する</button>
-                    <button onClick={() => handleRenotify(job)} disabled={renotifying === job.id} style={{ padding: '6px 14px', background: renotifying === job.id ? '#ccc' : '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '8px', fontSize: '13px', cursor: renotifying === job.id ? 'not-allowed' : 'pointer', color: '#C2410C', fontWeight: '600' }}>
-                      {renotifying === job.id ? '送信中...' : '再募集通知'}
-                    </button>
-                  </>
-                )}
-                <button onClick={() => { setEditJobModal(job); setEditJobForm({ work_date: job.work_date, time_from: job.time_from, time_to: job.time_to, wage_amount: String(job.wage_amount), address: (job as any).address ?? '', facility_type: job.facility_type, description: (job as any).description ?? '' }) }} style={{ padding: '4px 10px', background: 'none', border: '1px solid #93C5FD', borderRadius: '6px', color: '#3B82F6', fontSize: '12px', cursor: 'pointer' }}>編集</button>
-                <button onClick={() => handleDeleteJob(job.id)} style={{ padding: '4px 10px', background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', fontSize: '12px', cursor: 'pointer' }}>削除</button>
-              </div>
-              {job.applications?.length > 0 && (
-                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-                  <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>応募した看護師</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {job.applications.map(app => {
+                    <div style={S.divider} />
+                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '500', marginBottom: '8px' }}>応募した看護師</div>
+                    {job.applications.map((app, idx) => {
                       const nurseName = nurseNames[app.nurse_id] || '読み込み中'
                       const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
                       const isAccepted = app.status === 'accepted'
                       const isRejected = app.status === 'rejected'
                       return (
-                        <div key={app.id} style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <button onClick={() => handleViewProfile(app.nurse_id)} style={{ padding: '6px 14px', background: '#F1F5F9', color: '#1A2235', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                        <div key={app.id} style={{ ...S.row, borderBottom: idx === job.applications.length - 1 ? 'none' : '0.5px solid #F1F5F9' }}>
+                          <div style={S.avatar}>{nurseName?.charAt(0) ?? '?'}</div>
+                          <button onClick={() => handleViewProfile(app.nurse_id)} style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', flex: 1, textAlign: 'left' }}>
                             {nurseName}
                           </button>
-                          {!isAccepted && !isRejected && (
-                            <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)} style={{ padding: '6px 14px', background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>採用する</button>
-                          )}
-                          {!isAccepted && !isRejected && (
-                            <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={{ padding: '6px 14px', background: '#FEF2F2', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>不採用</button>
-                          )}
-                          {isRejected && <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#94A3B8', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>不採用済み</span>}
-                          {isAccepted && <button onClick={() => router.push(`/chat/${app.id}`)} style={{ padding: '6px 14px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>チャット</button>}
-                          {isAccepted && !alreadyReviewed && (
-                            <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })} style={{ padding: '6px 14px', background: '#FDF0F0', color: '#C45A5A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>評価する</button>
-                          )}
-                          {isAccepted && alreadyReviewed && <span style={{ padding: '6px 14px', background: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>評価済み</span>}
+                          <span style={isAccepted ? S.badge('#D1FAE5', '#064E3B') : isRejected ? S.badge('#F1F5F9', '#475569') : S.badge('#FEF3DC', '#7A4D00')}>
+                            {isAccepted ? '採用確定' : isRejected ? '不採用済み' : '審査中'}
+                          </span>
+                          {!isAccepted && !isRejected && <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)} style={S.btn('#E07070', '#C45A5A', '#fff')}>採用する</button>}
+                          {!isAccepted && !isRejected && <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={S.btn('#fff', '#FCA5A5', '#991B1B')}>不採用</button>}
+                          {isAccepted && <button onClick={() => router.push(`/chat/${app.id}`)} style={S.btn('#EDE9FB', '#7F77DD', '#26215C')}>チャット</button>}
+                          {isAccepted && !alreadyReviewed && <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })} style={S.btn('#FEF3DC', '#D97706', '#451A03')}>評価する</button>}
+                          {isAccepted && alreadyReviewed && <span style={S.badge('#F1F5F9', '#64748B')}>評価済み</span>}
                         </div>
                       )
                     })}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+                  </>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
-      <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '15px' }}>常勤・パート求人</div>
+      {/* ===== 常勤・パート ===== */}
+      <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>常勤・パート求人</div>
       {regularJobs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', background: '#fff', borderRadius: '12px', border: '1px solid #EDE0E0', color: '#64748B' }}>
-          <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
+        <div style={{ textAlign: 'center', padding: '40px', background: '#fff', borderRadius: '12px', border: '0.5px solid #EDE0E0', color: '#64748B' }}>
+          <div style={{ fontSize: '28px', marginBottom: '10px' }}>📄</div>
           <div style={{ fontWeight: '600', marginBottom: '8px' }}>常勤・パート求人がありません</div>
-          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>投稿する</button>
+          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '10px 24px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginTop: '8px', fontFamily: 'inherit' }}>投稿する</button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {regularJobs.map(job => (
-            <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button onClick={() => handleDeleteRegularJob(job.id)} style={{ padding: '4px 10px', background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', fontSize: '12px', cursor: 'pointer', flexShrink: 0 }}>削除</button>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '3px' }}>{job.title}</div>
-                  <div style={{ fontSize: '13px', color: '#64748B' }}>{job.employment_type} · {job.salary_type} ¥{job.salary_amount?.toLocaleString()} · {job.location}</div>
-                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>⏰ {job.work_hours} 📅 {job.work_days}</div>
-                </div>
-                <span style={{ background: job.status === 'open' ? '#D1FAE5' : '#F1F5F9', color: job.status === 'open' ? '#065F46' : '#64748B', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>
-                  {job.status === 'open' ? '掲載中' : '終了'}
-                </span>
+            <div key={job.id} style={{ background: '#fff', borderRadius: '10px', padding: '14px 18px', border: '0.5px solid #EDE0E0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '2px' }}>{job.title}</div>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>{job.employment_type} · {job.salary_type} ¥{job.salary_amount?.toLocaleString()} · {job.location}</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>⏰ {job.work_hours}　📅 {job.work_days}</div>
               </div>
+              <span style={job.status === 'open' ? S.badge('#D1FAE5', '#065F46') : S.badge('#F1F5F9', '#64748B')}>{job.status === 'open' ? '掲載中' : '終了'}</span>
+              <button onClick={() => handleDeleteRegularJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
             </div>
           ))}
         </div>
