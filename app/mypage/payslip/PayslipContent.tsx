@@ -70,7 +70,7 @@ export default function PayslipContent() {
   return (
     <>
       <style>{`
-        @media print { .no-print { display: none !important; } body { margin: 0; } @page { margin: 20mm; } }
+        @media print { .no-print { display: none !important; } body { margin: 0; } nav, header { display: none !important; } @page { margin: 20mm; } }
         body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; }
       `}</style>
       <div className="no-print" style={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 8, zIndex: 100 }}>
