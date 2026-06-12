@@ -206,11 +206,36 @@ export default function MyPage() {
   }
 
   const completionSteps = [
-    { label: '会員登録', done: true, action: null },
-    { label: 'プロフィール入力', done: !!(profile?.name && profile?.experience_years), action: 'profile' },
-    { label: '看護師免許証', done: !!profile?.license_url, action: 'profile' },
-    { label: '振込口座登録', done: !!(bankAccount?.bank_name && bankAccount?.account_number), action: 'profile' },
-    { label: '初回バイト完了', done: applications.some(a => a.status === 'accepted'), action: null },
+    {
+      label: '会員登録',
+      done: true,
+      action: null,
+      message: null,
+    },
+    {
+      label: 'プロフィール入力',
+      done: !!(profile?.name && profile?.experience_years),
+      action: 'profile' as const,
+      message: '名前・経験年数を入力すると施設に見つけてもらいやすくなります',
+    },
+    {
+      label: '看護師免許証',
+      done: !!profile?.license_url,
+      action: 'profile' as const,
+      message: '免許証を提出すると施設からの信頼度が大幅アップします',
+    },
+    {
+      label: '振込口座登録',
+      done: !!(bankAccount?.bank_name && bankAccount?.account_number),
+      action: 'profile' as const,
+      message: '給与振込のために口座を登録しておきましょう',
+    },
+    {
+      label: '初回バイト完了',
+      done: applications.some(a => a.status === 'accepted'),
+      action: null,
+      message: '求人を探して最初の一歩を踏み出しましょう！',
+    },
   ]
   const completionPct = Math.round(completionSteps.filter(s => s.done).length / completionSteps.length * 100)
 
@@ -432,20 +457,34 @@ export default function MyPage() {
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>登録状況</div>
             <div style={{ fontSize: 13, color: C.sub, marginBottom: 20 }}>完了すると施設からの信頼度が上がります</div>
             {completionSteps.map((step, i) => (
-              <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < completionSteps.length - 1 ? `1px solid ${C.border}` : 'none' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 18, background: step.done ? '#D1FAE5' : '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {step.done ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span> : <span style={{ color: C.sub, fontSize: 14 }}>{i + 1}</span>}
-                </div>
-                <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600 }}>{step.label}</div></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {!step.done && step.action && (
-                    <button onClick={() => setTab(step.action as any)} style={{ padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.light, color: C.dark, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                      登録する
-                    </button>
-                  )}
-                  <span style={{ background: step.done ? '#D1FAE5' : '#F1F5F9', color: step.done ? '#065F46' : C.sub, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                    {step.done ? '完了' : '未完了'}
-                  </span>
+              <div key={step.label} style={{ padding: '14px 0', borderBottom: i < completionSteps.length - 1 ? `1px solid ${C.border}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 18, background: step.done ? '#D1FAE5' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {step.done
+                      ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span>
+                      : <span style={{ color: '#92400E', fontSize: 14 }}>{i + 1}</span>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{step.label}</div>
+                    {!step.done && step.message && (
+                      <div style={{ fontSize: 12, color: C.sub, marginTop: 3 }}>{step.message}</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {!step.done && step.action && (
+                      <button onClick={() => setTab(step.action as any)} style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.primary, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        登録する →
+                      </button>
+                    )}
+                    {!step.done && !step.action && step.label === '初回バイト完了' && (
+                      <button onClick={() => window.location.href = '/jobs'} style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.primary, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        求人を探す →
+                      </button>
+                    )}
+                    <span style={{ background: step.done ? '#D1FAE5' : '#FEF3C7', color: step.done ? '#065F46' : '#92400E', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                      {step.done ? '完了' : '未完了'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
