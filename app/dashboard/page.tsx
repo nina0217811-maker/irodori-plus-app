@@ -448,6 +448,17 @@ export default function DashboardPage() {
           <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{facilityName}</div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {(() => {
+            const now = new Date()
+            return (
+              <button
+                onClick={() => window.open(`/dashboard/payslip?year=${now.getFullYear()}&month=${now.getMonth() + 1}&facilityId=${userId}`, '_blank')}
+                style={{ padding: '8px 16px', background: '#fff', color: '#64748B', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                📄 今月の支払い明細
+              </button>
+            )
+          })()}
           <button onClick={() => router.push('/post-regular-job')} style={{ padding: '8px 16px', background: '#fff', color: '#E07070', border: '1px solid #E07070', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 常勤・パート</button>
           <button onClick={() => router.push('/post-job')} style={{ padding: '8px 16px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 単発求人を投稿</button>
           {userId === '2f22fea3-4f1f-4fac-9053-1f8d4b14f523' && (
