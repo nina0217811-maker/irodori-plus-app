@@ -303,6 +303,18 @@ export default function MyPage() {
           ))}
         </div>
 
+        {/* 確定申告バナー */}
+        <div
+          onClick={() => router.push('/tax')}
+          style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        >
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E' }}>📊 確定申告・給与計算</div>
+            <div style={{ fontSize: 12, color: '#854F0B', marginTop: 2 }}>収支集計・経費メモ・PDF出力はこちら</div>
+          </div>
+          <span style={{ fontSize: 13, color: '#92400E' }}>→</span>
+        </div>
+
         {/* タブ */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 20, overflowX: 'auto' }}>
           {(['apps', 'favs', 'calendar', 'steps', 'profile'] as const).map((key, i) => {
