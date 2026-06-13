@@ -95,12 +95,14 @@ export default function Navbar() {
     { label: '施設特集', href: '/features' },
     { label: 'チャット', href: '/chats', showBadge: true },
     { label: 'マイページ', href: '/mypage' },
+    { label: 'ガイド', href: '/guide' },
   ]
 
   const facilityLinks = [
     { label: '求人管理', href: '/dashboard' },
     { label: '求人投稿', href: '/post-job' },
     { label: 'チャット', href: '/chats', showBadge: true },
+    { label: 'ガイド', href: '/guide' },
   ]
 
   const links = role === 'nurse' ? nurseLinks : role === 'facility' ? facilityLinks : []
