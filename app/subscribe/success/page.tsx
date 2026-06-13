@@ -12,9 +12,11 @@ export default function SuccessPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
 
+      const params = new URLSearchParams(window.location.search)
+      const sessionId = params.get('session_id')
       await supabase
         .from('facilities')
-        .update({ plan_status: 'active' })
+        .update({ plan_status: 'active', is_subscribed: true })
         .eq('id', user.id)
     }
     update()

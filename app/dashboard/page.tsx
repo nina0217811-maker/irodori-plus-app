@@ -92,6 +92,8 @@ export default function DashboardPage() {
   const [savingJob, setSavingJob] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetail, setReportDetail] = useState('')
+  const [isSubscribed, setIsSubscribed] = useState(true)
+  const [showPlanModal, setShowPlanModal] = useState(false)
   const [reporting, setReporting] = useState(false)
   const [rejectModal, setRejectModal] = useState<{ applicationId: string, nurseId: string, nurseName: string, jobId: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -99,10 +101,10 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData() }, [])
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (plan: string) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const res = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ facilityId: user.id, facilityName, email: user.email }) })
+    const res = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ facilityId: user.id, facilityName, email: user.email, plan }) })
     const { url } = await res.json()
     if (url) window.location.href = url
   }
@@ -145,8 +147,11 @@ export default function DashboardPage() {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) { router.push('/login'); return }
     setUserId(userData.user.id)
-    const { data: facility } = await supabase.from('facilities').select('facility_name').eq('id', userData.user.id).single()
-    if (facility) setFacilityName(facility.facility_name)
+    const { data: facility } = await supabase.from('facilities').select('facility_name, plan_status, is_subscribed').eq('id', userData.user.id).single()
+    if (facility) {
+      setFacilityName(facility.facility_name)
+      setIsSubscribed(facility.plan_status === 'active' || facility.is_subscribed)
+    }
     const { data: jobData } = await supabase.from('jobs').select('*, applications (id, nurse_id, status)').eq('facility_id', userData.user.id)
     if (jobData) {
       setJobs(jobData)
@@ -436,6 +441,72 @@ export default function DashboardPage() {
               <button onClick={submitReview} disabled={rating === 0 || submitting} style={{ flex: 1, padding: '10px', background: rating === 0 ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: rating === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                 {submitting ? '送信中...' : '評価する'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 未契約バナー ===== */}
+      {!isSubscribed && (
+        <div
+          onClick={() => setShowPlanModal(true)}
+          style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        >
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#92400E' }}>プランに加入して求人を掲載しましょう</div>
+            <div style={{ fontSize: 12, color: '#854F0B', marginTop: 2 }}>単発求人プラン ¥11,000/月〜。タップしてプランを選択</div>
+          </div>
+          <span style={{ fontSize: 13, color: '#92400E', fontWeight: 700 }}>プランを見る →</span>
+        </div>
+      )}
+
+      {/* ===== プラン選択モーダル ===== */}
+      {showPlanModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>プランを選択</div>
+              <button onClick={() => setShowPlanModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#64748B' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ background: '#FDF0F0', border: '2px solid #E07070', borderRadius: 12, padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>おすすめ</span>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>単発求人プラン</div>
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥11,000<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
+                  単発求人を無制限に掲載・看護師への即時LINE通知・チャット・支払い明細管理
+                </div>
+                <button onClick={() => { setShowPlanModal(false); handleSubscribe('single') }} style={{ width: '100%', padding: '11px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  このプランで始める
+                </button>
+              </div>
+              <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>正社員・パート求人プラン</div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>初期¥66,000</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>+ 月額¥22,000</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
+                  特集ページ作成・irodori公式SNS投稿・求人掲載・応募者管理・チャット・支払い明細管理
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('regular_initial') }} style={{ flex: 1, padding: '11px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    初期費用を支払う
+                  </button>
+                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('regular_monthly') }} style={{ flex: 1, padding: '11px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    月額を支払う
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 16, textAlign: 'center' }}>
+              ご不明な点は info@irodori0305.jp までお問い合わせください
             </div>
           </div>
         </div>
