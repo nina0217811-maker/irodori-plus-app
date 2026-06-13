@@ -23,6 +23,9 @@ export default function Footer() {
           <a href="mailto:info@irodori0305.jp" style={{ color: '#94A3B8', fontSize: '13px', textDecoration: 'none' }}>
             お問い合わせ
           </a>
+          <Link href="/tokusho" style={{ color: '#94A3B8', fontSize: '13px', textDecoration: 'none' }}>
+            特定商取引法に基づく表記
+          </Link>
         </div>
         <div style={{ fontSize: '12px', color: '#64748B' }}>
           © 2026 株式会社irodori. All rights reserved.
