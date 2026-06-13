@@ -40,9 +40,9 @@ export default function RegisterPage() {
         setLoading(false)
         return
       }
-      router.push('/dashboard')
+      router.push('/onboarding?role=facility')
     } else {
-      router.push('/mypage')
+      router.push('/onboarding?role=nurse')
     }
   }
 
