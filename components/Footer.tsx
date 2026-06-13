@@ -20,8 +20,8 @@ export default function Footer() {
           <Link href="/terms" style={{ color: '#94A3B8', fontSize: '13px', textDecoration: 'none' }}>
             利用規約
           </Link>
-          <a href="mailto:info@irodori0305.jp" style={{ color: '#94A3B8', fontSize: '13px', textDecoration: 'none' }}>
-            お問い合わせ
+          <a href="/contact" style={{ color: '#94A3B8', fontSize: '13px', textDecoration: 'none' }}>
+            お問い合わせ・資料請求
           </a>
           <Link href="/tokusho" style={{ color: '#94A3B8', fontSize: '13px', textDecoration: 'none' }}>
             特定商取引法に基づく表記

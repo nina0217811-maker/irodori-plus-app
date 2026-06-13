@@ -181,6 +181,9 @@ export default function Navbar() {
           {/* PC用：未ログイン */}
           {!user ? (
             <div style={{ display: 'flex', gap: '8px' }}>
+              <Link href="/contact">
+                <button style={{ padding: '6px 14px', background: 'none', border: '1px solid #EDE0E0', borderRadius: '8px', color: '#64748B', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>資料請求</button>
+              </Link>
               <Link href="/login">
                 <button style={{ padding: '6px 14px', background: 'none', border: 'none', color: '#64748B', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>ログイン</button>
               </Link>
