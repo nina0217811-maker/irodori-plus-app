@@ -5,24 +5,32 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-04-22.dahlia' as any,
 })
 
-const PLANS: Record<string, { price: string; mode: 'subscription' | 'payment' }> = {
-  single: {
+const PLANS: Record<string, { price: string; mode: 'subscription' | 'payment'; label: string }> = {
+  ume: {
     price: 'price_1TSeEmHSLOWxbHz4fHVfdUHh',
     mode: 'subscription',
+    label: '梅プラン ¥11,000/月',
   },
-  regular_monthly: {
+  take: {
     price: 'price_1ThowJHSLOWxbHz4nPq7d3vt',
     mode: 'subscription',
+    label: '竹プラン ¥29,800/月',
   },
-  regular_initial: {
+  matsu_monthly: {
+    price: 'price_1ThqD1HSLOWxbHz4476rURvZ',
+    mode: 'subscription',
+    label: '松プラン 月額 ¥39,800/月',
+  },
+  matsu_initial: {
     price: 'price_1ThoveHSLOWxbHz4xDnGeGdp',
     mode: 'payment',
+    label: '松プラン 初期費用 ¥66,000',
   },
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { facilityId, facilityName, email, plan = 'single' } = await req.json()
+    const { facilityId, facilityName, email, plan = 'ume' } = await req.json()
 
     const selectedPlan = PLANS[plan]
     if (!selectedPlan) {

@@ -463,47 +463,73 @@ export default function DashboardPage() {
       {/* ===== プラン選択モーダル ===== */}
       {showPlanModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>プランを選択</div>
               <button onClick={() => setShowPlanModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#64748B' }}>×</button>
             </div>
+            <p style={{ fontSize: 12, color: '#64748B', marginBottom: 20 }}>大手求人サイトは2週間で¥90,000〜。irodori+は月額で使い放題です。</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ background: '#FDF0F0', border: '2px solid #E07070', borderRadius: 12, padding: '20px' }}>
+
+              {/* 梅 */}
+              <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>おすすめ</span>
+                    <span style={{ background: '#FBF7F7', color: '#94A3B8', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>梅</span>
                     <div style={{ fontSize: 15, fontWeight: 700 }}>単発求人プラン</div>
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥11,000<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
                 </div>
                 <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
-                  単発求人を無制限に掲載・看護師への即時LINE通知・チャット・支払い明細管理
+                  単発求人を無制限掲載・看護師への即時LINE通知・チャット・支払い明細管理
                 </div>
-                <button onClick={() => { setShowPlanModal(false); handleSubscribe('single') }} style={{ width: '100%', padding: '11px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  このプランで始める
+                <button onClick={() => { setShowPlanModal(false); handleSubscribe('ume') }} style={{ width: '100%', padding: '10px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  梅プランで始める
                 </button>
               </div>
+
+              {/* 竹 */}
+              <div style={{ background: '#FDF0F0', border: '2px solid #E07070', borderRadius: 12, padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>竹・おすすめ</span>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>正社員・パート求人プラン</div>
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥29,800<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
+                  単発 + 正社員・パート求人掲載・引き抜きOK・チャット・支払い明細管理
+                </div>
+                <button onClick={() => { setShowPlanModal(false); handleSubscribe('take') }} style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  竹プランで始める
+                </button>
+              </div>
+
+              {/* 松 */}
               <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>正社員・パート求人プラン</div>
+                  <div>
+                    <span style={{ background: '#1A2235', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>松・採用ブランディング</span>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>プレミアムプラン</div>
+                  </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>初期¥66,000</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>+ 月額¥22,000</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>+ 月額¥39,800</div>
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
-                  特集ページ作成・irodori公式SNS投稿・求人掲載・応募者管理・チャット・支払い明細管理
+                  竹の全機能 + 特集ページ作成 + irodori公式SNS投稿 + 引き抜きOK
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('regular_initial') }} style={{ flex: 1, padding: '11px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('matsu_initial') }} style={{ flex: 1, padding: '10px', background: '#fff', color: '#1A2235', border: '1.5px solid #1A2235', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                     初期費用を支払う
                   </button>
-                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('regular_monthly') }} style={{ flex: 1, padding: '11px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('matsu_monthly') }} style={{ flex: 1, padding: '10px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                     月額を支払う
                   </button>
                 </div>
               </div>
+
             </div>
             <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 16, textAlign: 'center' }}>
               ご不明な点は info@irodori0305.jp までお問い合わせください
