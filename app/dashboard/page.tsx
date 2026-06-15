@@ -475,7 +475,7 @@ export default function DashboardPage() {
               <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <span style={{ background: '#FBF7F7', color: '#94A3B8', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>梅</span>
+                    <span style={{ background: '#FBF7F7', color: '#94A3B8', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>ライト</span>
                     <div style={{ fontSize: 15, fontWeight: 700 }}>単発求人プラン</div>
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥11,000<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
@@ -484,7 +484,7 @@ export default function DashboardPage() {
                   単発求人を無制限掲載・看護師への即時LINE通知・チャット・支払い明細管理
                 </div>
                 <button onClick={() => { setShowPlanModal(false); handleSubscribe('ume') }} style={{ width: '100%', padding: '10px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  梅プランで始める
+                  ライトプランで始める
                 </button>
               </div>
 
@@ -492,7 +492,7 @@ export default function DashboardPage() {
               <div style={{ background: '#FDF0F0', border: '2px solid #E07070', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>竹・おすすめ</span>
+                    <span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>スタンダード・おすすめ</span>
                     <div style={{ fontSize: 15, fontWeight: 700 }}>正社員・パート求人プラン</div>
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥29,800<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
@@ -501,7 +501,7 @@ export default function DashboardPage() {
                   単発 + 正社員・パート求人掲載・引き抜きOK・チャット・支払い明細管理
                 </div>
                 <button onClick={() => { setShowPlanModal(false); handleSubscribe('take') }} style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  竹プランで始める
+                  スタンダードプランで始める
                 </button>
               </div>
 
@@ -509,7 +509,7 @@ export default function DashboardPage() {
               <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <span style={{ background: '#1A2235', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>松・採用ブランディング</span>
+                    <span style={{ background: '#1A2235', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>プレミアム・採用ブランディング</span>
                     <div style={{ fontSize: 15, fontWeight: 700 }}>プレミアムプラン</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
