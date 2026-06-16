@@ -120,7 +120,7 @@ export default function PostJobPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 ${wageLabel}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+          message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 ${wageLabel}${form.description ? `\n📝 ${form.description}` : ''}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
         }),
       })
       setLastForm({ ...form })
