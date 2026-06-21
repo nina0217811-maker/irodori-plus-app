@@ -86,7 +86,7 @@ export default function PostJobPage() {
       ? form.tags.split('　').concat(form.tags.split(' ')).filter(t => t.trim()).map(t => t.trim()).filter((v, i, a) => a.indexOf(v) === i)
       : []
 
-    const { error } = await supabase.from('jobs').insert({
+    const { data: insertedJob, error } = await supabase.from('jobs').insert({
       facility_id: userId,
       work_date: form.work_date,
       time_from: form.time_from,
@@ -101,7 +101,7 @@ export default function PostJobPage() {
       required_count: form.required_count,
       address: form.address || facilityAddress,
       status: 'open',
-    })
+    }).select()
 
     if (!error) {
       const { data: facilityData } = await supabase
@@ -116,7 +116,7 @@ export default function PostJobPage() {
         ? `時給 ¥${parseInt(form.wage_amount).toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}`
         : `日給 ¥${parseInt(form.wage_amount).toLocaleString()}`
 
-      const insertedId = Array.isArray(data) ? data?.[0]?.id : (data as any)?.id ?? ''
+      const insertedId = insertedJob?.[0]?.id ?? ''
       // 全体LINE通知
       await fetch('/api/line-notify', {
         method: 'POST',
