@@ -66,7 +66,7 @@ const STATUS: Record<string, { label: string; bg: string; color: string }> = {
 
 export default function MyPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'apps' | 'favs' | 'calendar' | 'steps' | 'profile'>('apps')
+  const [tab, setTab] = useState<'apps' | 'favs' | 'calendar' | 'steps' | 'pref' | 'profile'>('apps')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
@@ -317,8 +317,8 @@ export default function MyPage() {
 
         {/* タブ */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 20, overflowX: 'auto' }}>
-          {(['apps', 'favs', 'calendar', 'steps', 'profile'] as const).map((key, i) => {
-            const labels = ['応募履歴', 'お気に入り', 'カレンダー', '登録状況', 'プロフィール']
+          {(['apps', 'favs', 'calendar', 'steps', 'pref', 'profile'] as const).map((key, i) => {
+            const labels = ['応募履歴', 'お気に入り', 'カレンダー', '登録状況', '希望条件', 'プロフィール']
             return (
               <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', padding: '12px 16px', fontWeight: tab === key ? 700 : 500, color: tab === key ? C.primary : C.sub, borderBottom: `2px solid ${tab === key ? C.primary : 'transparent'}`, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                 {labels[i]}
@@ -501,6 +501,11 @@ export default function MyPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* 希望条件 */}
+        {tab === 'pref' && (
+          <PreferenceForm userId={userId} />
         )}
 
         {/* プロフィール編集 */}
@@ -712,6 +717,116 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
           {bankSaving ? '保存中...' : bankDone ? '保存しました！' : '口座情報を保存する'}
         </button>
       </div>
+    </div>
+  )
+}
+
+function PreferenceForm({ userId }: { userId: string }) {
+  const AREAS = ['那覇市', '浦添市', '宜野湾市', '沖縄市', 'うるま市', '名護市', '糸満市', '豊見城市', '南城市', '読谷村', '恩納村', 'その他']
+  const FACILITY_TYPES = ['病院', 'クリニック', '介護老人保健施設', '訪問看護', 'デイサービス', '訪問入浴', 'グループホーム', '特別養護老人ホーム', '有料老人ホーム', '障害者施設', '保育園', 'その他']
+  const WAGE_OPTIONS = [{ label: '指定なし', value: 0 }, { label: '¥5,000以上', value: 5000 }, { label: '¥10,000以上', value: 10000 }, { label: '¥20,000以上', value: 20000 }]
+
+  const [areas, setAreas] = useState<string[]>([])
+  const [facilityTypes, setFacilityTypes] = useState<string[]>([])
+  const [minWage, setMinWage] = useState(0)
+  const [notifyLine, setNotifyLine] = useState(true)
+  const [notifyEmail, setNotifyEmail] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from('nurse_preferences').select('*').eq('nurse_id', userId).maybeSingle()
+      if (data) {
+        setAreas(data.areas ?? [])
+        setFacilityTypes(data.facility_types ?? [])
+        setMinWage(data.min_wage ?? 0)
+        setNotifyLine(data.notify_line ?? true)
+        setNotifyEmail(data.notify_email ?? true)
+      }
+      setLoading(false)
+    }
+    if (userId) load()
+  }, [userId])
+
+  const toggle = (arr: string[], val: string, set: (v: string[]) => void) => {
+    set(arr.includes(val) ? arr.filter(a => a !== val) : [...arr, val])
+  }
+
+  const save = async () => {
+    setSaving(true)
+    const payload = { nurse_id: userId, areas, facility_types: facilityTypes, min_wage: minWage, notify_line: notifyLine, notify_email: notifyEmail, updated_at: new Date().toISOString() }
+    const { data: existing } = await supabase.from('nurse_preferences').select('id').eq('nurse_id', userId).maybeSingle()
+    if (existing) {
+      await supabase.from('nurse_preferences').update(payload).eq('nurse_id', userId)
+    } else {
+      await supabase.from('nurse_preferences').insert(payload)
+    }
+    setSaving(false)
+    setDone(true)
+    setTimeout(() => setDone(false), 2000)
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#64748B' }}>読み込み中...</div>
+
+  const chip = (label: string, active: boolean, onClick: () => void) => (
+    <button key={label} onClick={onClick} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400, background: active ? '#E07070' : '#fff', color: active ? '#fff' : '#64748B', border: `1px solid ${active ? '#E07070' : '#EDE0E0'}`, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+      {label}
+    </button>
+  )
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>希望条件設定</div>
+        <div style={{ fontSize: 13, color: '#64748B' }}>条件に合う求人が投稿されたら自動で通知します</div>
+      </div>
+
+      {/* エリア */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>📍 希望エリア（複数選択可）</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {AREAS.map(a => chip(a, areas.includes(a), () => toggle(areas, a, setAreas)))}
+        </div>
+      </div>
+
+      {/* 施設種別 */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🏥 希望施設種別（複数選択可）</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {FACILITY_TYPES.map(t => chip(t, facilityTypes.includes(t), () => toggle(facilityTypes, t, setFacilityTypes)))}
+        </div>
+      </div>
+
+      {/* 最低日給 */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>💰 希望最低日給</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {WAGE_OPTIONS.map(w => chip(w.label, minWage === w.value, () => setMinWage(w.value)))}
+        </div>
+      </div>
+
+      {/* 通知設定 */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🔔 通知方法</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[{ label: 'LINEで通知', value: notifyLine, set: setNotifyLine }, { label: 'メールで通知', value: notifyEmail, set: setNotifyEmail }].map(({ label, value, set }) => (
+            <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
+              <input type="checkbox" checked={value} onChange={e => set(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#E07070' }} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: '#64748B', lineHeight: 1.8 }}>
+        💡 条件を指定しない項目はすべての求人が対象になります
+      </div>
+
+      <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+        {saving ? '保存中...' : done ? '保存しました！' : '希望条件を保存する'}
+      </button>
     </div>
   )
 }
