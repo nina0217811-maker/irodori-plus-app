@@ -116,6 +116,7 @@ export default function PostJobPage() {
         ? `時給 ¥${parseInt(form.wage_amount).toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}`
         : `日給 ¥${parseInt(form.wage_amount).toLocaleString()}`
 
+      const insertedId = Array.isArray(data) ? data?.[0]?.id : (data as any)?.id ?? ''
       // 全体LINE通知
       await fetch('/api/line-notify', {
         method: 'POST',
@@ -130,7 +131,7 @@ export default function PostJobPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          jobId: data?.[0]?.id,
+          jobId: insertedId,
           facilityName,
           workDate: form.work_date,
           timeFrom: form.time_from,
