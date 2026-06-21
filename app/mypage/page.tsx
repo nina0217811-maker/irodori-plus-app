@@ -810,14 +810,11 @@ function PreferenceForm({ userId }: { userId: string }) {
       {/* 通知設定 */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🔔 通知方法</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[{ label: 'LINEで通知', value: notifyLine, set: setNotifyLine }, { label: 'メールで通知', value: notifyEmail, set: setNotifyEmail }].map(({ label, value, set }) => (
-            <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
-              <input type="checkbox" checked={value} onChange={e => set(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#E07070' }} />
-              {label}
-            </label>
-          ))}
-        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
+          <input type="checkbox" checked={notifyEmail} onChange={e => setNotifyEmail(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#E07070' }} />
+          メールで通知
+        </label>
+        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 6 }}>※ LINEには全体通知が届きます</div>
       </div>
 
       <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: '#64748B', lineHeight: 1.8 }}>
