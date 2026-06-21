@@ -116,11 +116,30 @@ export default function PostJobPage() {
         ? `時給 ¥${parseInt(form.wage_amount).toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}`
         : `日給 ¥${parseInt(form.wage_amount).toLocaleString()}`
 
+      // 全体LINE通知
       await fetch('/api/line-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: `【新着求人】\n📅 ${form.work_date}\n⏰ ${form.time_from}〜${form.time_to}\n🏥 ${facilityName}（${form.facility_type}）\n📍 ${address}\n💰 ${wageLabel}${form.description ? `\n📝 ${form.description}` : ''}\n\n求人を見る👇\nhttps://irodori0305.jp/jobs`,
+        }),
+      })
+
+      // 希望条件マッチング通知
+      await fetch('/api/match-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: data?.[0]?.id,
+          facilityName,
+          workDate: form.work_date,
+          timeFrom: form.time_from,
+          timeTo: form.time_to,
+          wageLabel,
+          address,
+          facilityType: form.facility_type,
+          wageAmount: parseInt(form.wage_amount),
+          description: form.description,
         }),
       })
       setLastForm({ ...form })
