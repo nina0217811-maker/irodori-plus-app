@@ -170,17 +170,17 @@ export default function NursesPage() {
               <div key={nurse.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE0E0', padding: '16px 20px' }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#FDF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#E07070', flexShrink: 0 }}>
-                    {nurse.name?.charAt(0) ?? '?'}
+                    {canScout ? (nurse.name?.charAt(0) ?? '?') : '?'}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700 }}>{nurse.name}</span>
+                      <span style={{ fontSize: 15, fontWeight: 700 }}>{canScout ? nurse.name : '――'}</span>
                       <span style={{ background: st.bg, color: st.color, padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{st.label}</span>
                     </div>
                     <div style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>
                       {nurse.license === 'rn' ? '正看護師' : '准看護師'}
                       {nurse.experience_years ? ` · 経験${nurse.experience_years}年` : ''}
-                      {nurse.areas?.length ? ` · ${nurse.areas.join('・')}` : ''}
+                      {canScout && nurse.areas?.length ? ` · ${nurse.areas.join('・')}` : ''}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {nurse.license_url && <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>免許証提出済み</span>}
