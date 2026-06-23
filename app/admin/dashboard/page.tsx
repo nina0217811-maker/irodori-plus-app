@@ -30,7 +30,7 @@ export default function AdminDashboard() {
     setLoading(true)
 
     const { data: nurseData } = await supabase.from("nurse_profiles").select("id,name,is_suspended")
-    const { data: facilityData } = await supabase.from("facilities").select("id,facility_name,plan_status")
+    const { data: facilityData } = await supabase.from("facilities").select("id,facility_name,plan_status,is_subscribed,subscription_plan")
     const { data: jobData } = await supabase.from("jobs").select("id,facility_id,status,required_count,applications(id,status)")
 
     setNurses(nurseData || [])
@@ -162,9 +162,24 @@ export default function AdminDashboard() {
                       <tr key={i}>
                         <td style={td}>{f.facility_name || "-"}</td>
                         <td style={td}>
-                          <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "20px", fontSize: "12px", background: f.plan_status ? "#1e1b4b" : "#1f1f1f", color: f.plan_status ? "#a78bfa" : "#666" }}>
-                            {f.plan_status ? "課金中" : "未課金"}
-                          </span>
+                          <select
+                            value={f.plan_status === 'active' ? (f.subscription_plan || 'ume') : 'none'}
+                            onChange={async (e) => {
+                              const val = e.target.value
+                              if (val === 'none') {
+                                await supabase.from('facilities').update({ plan_status: null, is_subscribed: false, subscription_plan: null }).eq('id', f.id)
+                              } else {
+                                await supabase.from('facilities').update({ plan_status: 'active', is_subscribed: true, subscription_plan: val }).eq('id', f.id)
+                              }
+                              fetchAll()
+                            }}
+                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #a78bfa', background: '#1a1a1a', color: '#a78bfa', fontSize: '12px', cursor: 'pointer' }}
+                          >
+                            <option value="none">未契約</option>
+                            <option value="ume">ライト</option>
+                            <option value="take">スタンダード</option>
+                            <option value="matsu_monthly">プレミアム</option>
+                          </select>
                         </td>
                         <td style={td}>
                           <button onClick={async () => {
