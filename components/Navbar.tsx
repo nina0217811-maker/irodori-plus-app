@@ -101,6 +101,7 @@ export default function Navbar() {
   const facilityLinks = [
     { label: '求人管理', href: '/dashboard' },
     { label: '求人投稿', href: '/post-job' },
+    { label: '看護師を探す', href: '/dashboard/nurses' },
     { label: 'チャット', href: '/chats', showBadge: true },
     { label: 'ガイド', href: '/guide' },
   ]
