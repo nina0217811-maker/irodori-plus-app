@@ -66,7 +66,7 @@ const STATUS: Record<string, { label: string; bg: string; color: string }> = {
 
 export default function MyPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'apps' | 'favs' | 'calendar' | 'steps' | 'pref' | 'profile'>('apps')
+  const [tab, setTab] = useState('apps')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
