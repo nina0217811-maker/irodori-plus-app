@@ -315,6 +315,18 @@ export default function MyPage() {
           <span style={{ fontSize: 13, color: '#92400E' }}>→</span>
         </div>
 
+        {/* 登録未完了アラート */}
+        {[
+          { condition: !profile?.license_url, icon: '📋', msg: '免許証を提出すると採用率が大幅にアップします！', action: 'profile' as const },
+          { condition: !(bankAccount?.bank_name && bankAccount?.account_number), icon: '💳', msg: '給与受け取りのために口座を登録しましょう', action: 'profile' as const },
+          { condition: !(profile?.name && profile?.experience_years), icon: '👤', msg: 'プロフィールを入力して施設に見つけてもらいやすくしましょう', action: 'profile' as const },
+        ].filter(a => a.condition).map((alert, i) => (
+          <div key={i} onClick={() => setTab(alert.action)} style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '10px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+            <div style={{ fontSize: 13, color: '#92400E' }}>{alert.icon} {alert.msg}</div>
+            <span style={{ fontSize: 12, color: '#92400E', fontWeight: 600, flexShrink: 0, marginLeft: 8 }}>登録する →</span>
+          </div>
+        ))}
+
         {/* タブ */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 20, overflowX: 'auto' }}>
           {(['apps', 'favs', 'calendar', 'steps', 'pref', 'profile'] as const).map((key, i) => {
@@ -731,6 +743,7 @@ function PreferenceForm({ userId }: { userId: string }) {
   const [minWage, setMinWage] = useState(0)
   const [notifyLine, setNotifyLine] = useState(true)
   const [notifyEmail, setNotifyEmail] = useState(true)
+  const [jobStatus, setJobStatus] = useState('looking_for_part')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -745,6 +758,8 @@ function PreferenceForm({ userId }: { userId: string }) {
         setNotifyLine(data.notify_line ?? true)
         setNotifyEmail(data.notify_email ?? true)
       }
+      const { data: np } = await supabase.from('nurse_profiles').select('job_status').eq('id', userId).maybeSingle()
+      if (np?.job_status) setJobStatus(np.job_status)
       setLoading(false)
     }
     if (userId) load()
@@ -756,6 +771,7 @@ function PreferenceForm({ userId }: { userId: string }) {
 
   const save = async () => {
     setSaving(true)
+    await supabase.from('nurse_profiles').update({ job_status: jobStatus }).eq('id', userId)
     const payload = { nurse_id: userId, areas, facility_types: facilityTypes, min_wage: minWage, notify_line: notifyLine, notify_email: notifyEmail, updated_at: new Date().toISOString() }
     const { data: existing } = await supabase.from('nurse_preferences').select('id').eq('nurse_id', userId).maybeSingle()
     if (existing) {
@@ -845,6 +861,84 @@ function PreferenceForm({ userId }: { userId: string }) {
       <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
         {saving ? '保存中...' : done ? '保存しました！' : '希望条件を保存する'}
       </button>
+    </div>
+  )
+}
+
+function ScoutList({ userId }: { userId: string }) {
+  const [scouts, setScouts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from('scouts').select('id, message, status, created_at, job_id, facility_id').eq('nurse_id', userId).order('created_at', { ascending: false })
+      if (data && data.length > 0) {
+        const facilityIds = [...new Set(data.map((s: any) => s.facility_id))]
+        const { data: facilities } = await supabase.from('facilities').select('id, facility_name').in('id', facilityIds)
+        const fMap: Record<string, string> = {}
+        facilities?.forEach((f: any) => { fMap[f.id] = f.facility_name })
+        const jobIds = data.filter((s: any) => s.job_id).map((s: any) => s.job_id)
+        let jobMap: Record<string, any> = {}
+        if (jobIds.length > 0) {
+          const { data: jobs } = await supabase.from('jobs').select('id, work_date, time_from, time_to, wage_amount').in('id', jobIds)
+          jobs?.forEach((j: any) => { jobMap[j.id] = j })
+        }
+        setScouts(data.map((s: any) => ({ ...s, facility_name: fMap[s.facility_id] ?? '—', job: jobMap[s.job_id] ?? null })))
+      }
+      setLoading(false)
+    }
+    if (userId) load()
+  }, [userId])
+
+  const respond = async (scoutId: string, status: 'interested' | 'declined') => {
+    await supabase.from('scouts').update({ status }).eq('id', scoutId)
+    setScouts(prev => prev.map(s => s.id === scoutId ? { ...s, status } : s))
+  }
+
+  const STATUS: Record<string, { label: string; bg: string; color: string }> = {
+    pending: { label: '未返答', bg: '#FEF3C7', color: '#92400E' },
+    interested: { label: '興味あり', bg: '#D1FAE5', color: '#065F46' },
+    declined: { label: '辞退', bg: '#F1F5F9', color: '#64748B' },
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#64748B' }}>読み込み中...</div>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {scouts.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748B' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: '#1A2235', marginBottom: 8 }}>まだスカウトが届いていません</div>
+          <div style={{ fontSize: 13 }}>希望条件を設定すると施設から見つけてもらいやすくなります</div>
+        </div>
+      ) : scouts.map(scout => {
+        const st = STATUS[scout.status] ?? STATUS.pending
+        return (
+          <div key={scout.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE0E0', padding: '16px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{scout.facility_name}</div>
+                <div style={{ fontSize: 12, color: '#64748B' }}>{new Date(scout.created_at).toLocaleDateString('ja-JP')}</div>
+              </div>
+              <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+            </div>
+            <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1A2235', lineHeight: 1.7, marginBottom: scout.job ? 8 : 12 }}>
+              {scout.message}
+            </div>
+            {scout.job && (
+              <div style={{ background: '#F0FDF4', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#065F46', marginBottom: 12 }}>
+                📅 {scout.job.work_date}　⏰ {scout.job.time_from}〜{scout.job.time_to}　💰 日給¥{scout.job.wage_amount.toLocaleString()}
+              </div>
+            )}
+            {scout.status === 'pending' && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => respond(scout.id, 'declined')} style={{ flex: 1, padding: '9px', background: '#fff', color: '#64748B', border: '1px solid #EDE0E0', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>辞退する</button>
+                <button onClick={() => respond(scout.id, 'interested')} style={{ flex: 2, padding: '9px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>興味あり</button>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
