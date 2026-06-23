@@ -167,7 +167,7 @@ export default function AdminDashboard() {
                             onChange={async (e) => {
                               const val = e.target.value
                               if (val === 'none') {
-                                await supabase.from('facilities').update({ plan_status: null, is_subscribed: false, subscription_plan: null }).eq('id', f.id)
+                                await supabase.from('facilities').update({ plan_status: 'inactive', is_subscribed: false, subscription_plan: null }).eq('id', f.id)
                               } else {
                                 await supabase.from('facilities').update({ plan_status: 'active', is_subscribed: true, subscription_plan: val }).eq('id', f.id)
                               }
