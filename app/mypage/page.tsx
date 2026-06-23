@@ -783,6 +783,27 @@ function PreferenceForm({ userId }: { userId: string }) {
         <div style={{ fontSize: 13, color: '#64748B' }}>条件に合う求人が投稿されたら自動で通知します</div>
       </div>
 
+      {/* ステータス設定 */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🙋 今の状況</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { value: 'looking_for_part', label: 'バイト探し中', desc: '単発・スポット勤務を探しています' },
+            { value: 'looking_for_job', label: '転職活動中', desc: '正社員・パートを探しています' },
+            { value: 'looking_for_both', label: 'どちらも検討中', desc: '単発も転職もどちらも見ています' },
+            { value: 'not_looking', label: '現在募集停止中', desc: 'スカウトを受け取りたくない' },
+          ].map(s => (
+            <label key={s.value} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: `1px solid ${jobStatus === s.value ? '#E07070' : '#EDE0E0'}`, borderRadius: 10, cursor: 'pointer', background: jobStatus === s.value ? '#FDF0F0' : '#fff' }}>
+              <input type="radio" name="jobStatus" value={s.value} checked={jobStatus === s.value} onChange={() => setJobStatus(s.value)} style={{ accentColor: '#E07070' }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: '#64748B' }}>{s.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* エリア */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>📍 希望エリア（複数選択可）</div>
