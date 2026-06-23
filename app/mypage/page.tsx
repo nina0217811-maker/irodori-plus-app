@@ -329,8 +329,8 @@ export default function MyPage() {
 
         {/* タブ */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 20, overflowX: 'auto' }}>
-          {(['apps', 'favs', 'calendar', 'steps', 'pref', 'profile'] as const).map((key, i) => {
-            const labels = ['応募履歴', 'お気に入り', 'カレンダー', '登録状況', '希望条件', 'プロフィール']
+          {(['apps', 'favs', 'calendar', 'steps', 'pref', 'scouts', 'profile'] as const).map((key, i) => {
+            const labels = ['応募履歴', 'お気に入り', 'カレンダー', '登録状況', '希望条件', 'スカウト', 'プロフィール']
             return (
               <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', padding: '12px 16px', fontWeight: tab === key ? 700 : 500, color: tab === key ? C.primary : C.sub, borderBottom: `2px solid ${tab === key ? C.primary : 'transparent'}`, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                 {labels[i]}
