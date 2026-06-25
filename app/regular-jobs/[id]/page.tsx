@@ -14,6 +14,14 @@ type RegularJob = {
   work_days: string
   location: string
   description: string
+  insurance: string | null
+  transportation: string | null
+  holidays: string | null
+  childcare_leave: string | null
+  parking: string | null
+  training: string | null
+  welfare: string | null
+  trial_period: string | null
   required_license: string
   facility_id: string
   facility_name?: string
@@ -103,6 +111,24 @@ export default function RegularJobDetailPage() {
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>業務内容</div>
             <div style={{ fontSize: 14, color: '#1A2235', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{job.description}</div>
+            {[
+              { label: '社会保険', value: (job as any).insurance, icon: '🏥' },
+              { label: '交通費', value: (job as any).transportation, icon: '🚃' },
+              { label: '休日・休暇', value: (job as any).holidays, icon: '📅' },
+              { label: '育児・産休', value: (job as any).childcare_leave, icon: '👶' },
+              { label: '駐車場', value: (job as any).parking, icon: '🚗' },
+              { label: '研修・教育', value: (job as any).training, icon: '📚' },
+              { label: '福利厚生', value: (job as any).welfare, icon: '🎁' },
+              { label: '試用期間', value: (job as any).trial_period, icon: '📋' },
+            ].filter(item => item.value).map(item => (
+              <div key={item.label} style={{ display: 'flex', gap: 8, marginTop: 10, padding: '8px 12px', background: '#FBF7F7', borderRadius: 8 }}>
+                <span style={{ fontSize: 14 }}>{item.icon}</span>
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748B', marginBottom: 2 }}>{item.label}</div>
+                  <div style={{ fontSize: 13, color: '#1A2235' }}>{item.value}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {isIrodori ? (
