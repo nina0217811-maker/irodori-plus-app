@@ -13,6 +13,10 @@ type FormState = {
   facility_type: string
   required_license: string
   description: string
+  items_to_bring: string
+  dress_code: string
+  parking: string
+  lunch: string
   is_urgent: boolean
   tags: string
   required_count: number
@@ -37,6 +41,10 @@ export default function PostJobPage() {
     facility_type: '',
     required_license: 'rn',
     description: '',
+    items_to_bring: '',
+    dress_code: '',
+    parking: '',
+    lunch: '',
     is_urgent: false,
     tags: '',
     required_count: 1,
@@ -96,6 +104,10 @@ export default function PostJobPage() {
       facility_type: form.facility_type,
       required_license: form.required_license,
       description: form.description,
+      items_to_bring: form.items_to_bring || null,
+      dress_code: form.dress_code || null,
+      parking: form.parking || null,
+      lunch: form.lunch || null,
       is_urgent: form.is_urgent,
       tags: tagsArray,
       required_count: form.required_count,
@@ -141,6 +153,10 @@ export default function PostJobPage() {
           facilityType: form.facility_type,
           wageAmount: parseInt(form.wage_amount),
           description: form.description,
+      items_to_bring: form.items_to_bring || null,
+      dress_code: form.dress_code || null,
+      parking: form.parking || null,
+      lunch: form.lunch || null,
         }),
       })
       setLastForm({ ...form })
@@ -315,6 +331,23 @@ export default function PostJobPage() {
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>業務内容 *</label>
           <textarea required value={form.description} onChange={e => set('description', e.target.value)} placeholder='業務内容、持ち物、注意点など...' style={{ ...inp, height: '100px', resize: 'vertical' }} />
+        </div>
+
+        <div style={{ marginBottom: '12px', background: '#FBF7F7', borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 10 }}>追加情報（任意）</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { key: 'items_to_bring', label: '持ち物・準備物', placeholder: '白衣・ナースシューズ・印鑑など' },
+              { key: 'dress_code', label: '服装・身だしなみ', placeholder: 'スクラブ支給・私服可など' },
+              { key: 'parking', label: '駐車場', placeholder: '無料駐車場あり・近隣コインパーキングなど' },
+              { key: 'lunch', label: '昼食', placeholder: '食堂あり・持参・近隣コンビニあり' },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label style={{ fontSize: 12, color: '#64748B', display: 'block', marginBottom: 4 }}>{label}</label>
+                <input type='text' value={(form as any)[key]} onChange={e => set(key as any, e.target.value)} placeholder={placeholder} style={{ ...inp, fontSize: 13 }} />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ marginBottom: '16px' }}>

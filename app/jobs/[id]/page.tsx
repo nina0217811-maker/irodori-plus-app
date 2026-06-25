@@ -14,6 +14,11 @@ type Job = {
   facility_type: string
   required_license: string
   description: string
+  items_to_bring: string | null
+  dress_code: string | null
+  parking: string | null
+  lunch: string | null
+  is_urgent: boolean
   is_urgent: boolean
   tags: string[]
   status: string
@@ -217,6 +222,20 @@ export default function JobDetailPage() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', marginBottom: '8px' }}>業務内容</div>
               <p style={{ fontSize: '14px', lineHeight: '1.8', color: '#1A2235' }}>{job.description}</p>
+              {[
+                { label: '持ち物・準備物', value: (job as any).items_to_bring, icon: '🎒' },
+                { label: '服装・身だしなみ', value: (job as any).dress_code, icon: '👔' },
+                { label: '駐車場', value: (job as any).parking, icon: '🚗' },
+                { label: '昼食', value: (job as any).lunch, icon: '🍱' },
+              ].filter(item => item.value).map(item => (
+                <div key={item.label} style={{ display: 'flex', gap: 8, marginTop: 10, padding: '8px 12px', background: '#FBF7F7', borderRadius: 8 }}>
+                  <span style={{ fontSize: 14 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#64748B', marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 13, color: '#1A2235' }}>{item.value}</div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {job.tags && job.tags.length > 0 && (
