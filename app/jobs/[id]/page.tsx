@@ -19,7 +19,6 @@ type Job = {
   parking: string | null
   lunch: string | null
   is_urgent: boolean
-  is_urgent: boolean
   tags: string[]
   status: string
   facilities: {
