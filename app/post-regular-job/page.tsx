@@ -19,6 +19,14 @@ export default function PostRegularJobPage() {
     location: '',
     description: '',
     required_license: 'rn',
+    insurance: '',
+    transportation: '',
+    holidays: '',
+    childcare_leave: '',
+    parking: '',
+    training: '',
+    welfare: '',
+    trial_period: '',
   })
 
   useEffect(() => {
@@ -46,6 +54,14 @@ export default function PostRegularJobPage() {
       location: form.location,
       description: form.description,
       required_license: form.required_license,
+      insurance: form.insurance || null,
+      transportation: form.transportation || null,
+      holidays: form.holidays || null,
+      childcare_leave: form.childcare_leave || null,
+      parking: form.parking || null,
+      training: form.training || null,
+      welfare: form.welfare || null,
+      trial_period: form.trial_period || null,
       status: 'open',
     })
 
@@ -140,6 +156,27 @@ export default function PostRegularJobPage() {
           <textarea required value={form.description} onChange={e => set('description', e.target.value)}
             placeholder='業務内容、職場環境、待遇など...'
             style={{ ...inp, height: '120px', resize: 'vertical' }} />
+        </div>
+
+        <div style={{ marginBottom: 16, background: '#FBF7F7', borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 10 }}>追加情報（任意）</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { key: 'insurance', label: '社会保険', placeholder: '健康保険・厚生年金・雇用保険・労災保険完備' },
+              { key: 'transportation', label: '交通費', placeholder: '全額支給・上限1万円/月など' },
+              { key: 'holidays', label: '休日・休暇', placeholder: '完全週休2日制・年間休日120日・有給20日など' },
+              { key: 'childcare_leave', label: '育児・産休', placeholder: '産休・育休取得実績あり' },
+              { key: 'parking', label: '駐車場', placeholder: '無料駐車場あり' },
+              { key: 'training', label: '研修・教育', placeholder: '入職時研修あり・資格取得支援制度あり' },
+              { key: 'welfare', label: '福利厚生', placeholder: '院内保育所・寮完備・各種手当など' },
+              { key: 'trial_period', label: '試用期間', placeholder: '3ヶ月（条件変更なし）' },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label style={{ fontSize: 12, color: '#64748B', display: 'block', marginBottom: 4 }}>{label}</label>
+                <input type='text' value={(form as any)[key]} onChange={e => set(key, e.target.value)} placeholder={placeholder} style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #EDE0E0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' as const, fontFamily: 'inherit' }} />
+              </div>
+            ))}
+          </div>
         </div>
 
         <button type='submit' disabled={loading} style={{ width: '100%', padding: 14, background: loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
