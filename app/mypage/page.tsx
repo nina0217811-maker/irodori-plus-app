@@ -515,6 +515,11 @@ export default function MyPage() {
           </div>
         )}
 
+        {/* スカウト */}
+        {tab === 'scouts' && (
+          <ScoutList userId={userId} />
+        )}
+
         {/* 希望条件 */}
         {tab === 'pref' && (
           <PreferenceForm userId={userId} />
