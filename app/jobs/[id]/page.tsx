@@ -39,6 +39,14 @@ export default function JobDetailPage() {
   const [role, setRole] = useState<'nurse' | 'facility' | null>(null)
   const [message, setMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
   const [agreedPolicy, setAgreedPolicy] = useState(false)
 
   useEffect(() => {
@@ -184,7 +192,7 @@ export default function JobDetailPage() {
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
       <button onClick={() => router.push('/jobs')} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '16px' }}>← 一覧に戻る</button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: '24px', alignItems: 'start' }}>
         <div>
           <div style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '16px' }}>
 
