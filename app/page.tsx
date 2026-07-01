@@ -89,8 +89,8 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <div style={{ borderRadius: '16px', overflow: 'hidden', height: '200px' }}>
-          <img src="/nurse2.jpg" alt="訪問看護" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+        <div style={{ borderRadius: '16px', overflow: 'hidden', height: '220px', maxWidth: '560px', margin: '0 auto' }}>
+          <img src="/nurse2.jpg" alt="訪問看護" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
         </div>
       </div>
 
