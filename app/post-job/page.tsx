@@ -67,6 +67,24 @@ export default function PostJobPage() {
     })
   }, [])
 
+  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [checkingPlan, setCheckingPlan] = useState(true)
+
+  useEffect(() => {
+    const checkPlan = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      const { data: facility } = await supabase.from('facilities').select('plan_status, is_subscribed').eq('id', user.id).maybeSingle()
+      if (!facility || (facility.plan_status !== 'active' && !facility.is_subscribed)) {
+        router.push('/dashboard')
+        return
+      }
+      setIsSubscribed(true)
+      setCheckingPlan(false)
+    }
+    checkPlan()
+  }, [])
+
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
   const calcEstimate = () => {
