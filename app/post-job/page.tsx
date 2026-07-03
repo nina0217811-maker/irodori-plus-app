@@ -67,8 +67,8 @@ export default function PostJobPage() {
     })
   }, [])
 
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [checkingPlan, setCheckingPlan] = useState(true)
+  const [isSubscribed, setIsSubscribed] = useState(true)
+  const [showPlanModal, setShowPlanModal] = useState(false)
 
   useEffect(() => {
     const checkPlan = async () => {
@@ -76,11 +76,9 @@ export default function PostJobPage() {
       if (!user) { router.push('/login'); return }
       const { data: facility } = await supabase.from('facilities').select('plan_status, is_subscribed').eq('id', user.id).maybeSingle()
       if (!facility || (facility.plan_status !== 'active' && !facility.is_subscribed)) {
-        router.push('/dashboard')
-        return
+        setIsSubscribed(false)
+        setShowPlanModal(true)
       }
-      setIsSubscribed(true)
-      setCheckingPlan(false)
     }
     checkPlan()
   }, [])
@@ -381,7 +379,7 @@ export default function PostJobPage() {
           </div>
         </div>
 
-        <button type='submit' disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <button type='submit' disabled={loading || !isSubscribed} onClick={!isSubscribed ? (e) => { e.preventDefault(); setShowPlanModal(true) } : undefined} style={{ width: '100%', padding: '14px', background: loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? '投稿中...' : '求人を投稿する'}
         </button>
         <div style={{ fontSize: '12px', color: '#64748B', textAlign: 'center', marginTop: '12px' }}>
@@ -389,5 +387,7 @@ export default function PostJobPage() {
         </div>
       </form>
     </div>
+    )
+  </div>
   )
 }
