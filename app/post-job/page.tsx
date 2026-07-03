@@ -237,7 +237,19 @@ export default function PostJobPage() {
   )
 
   return (
-    <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
+    <>
+      {showPlanModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', maxWidth: 400, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>プランへの加入が必要です</div>
+            <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.8, marginBottom: 24 }}>求人を投稿するにはプランに加入してください。<br />ライトプラン ¥11,000/月〜でご利用いただけます。</div>
+            <button onClick={() => router.push('/dashboard')} style={{ width: '100%', padding: '12px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>プランを選択する</button>
+            <button onClick={() => setShowPlanModal(false)} style={{ width: '100%', padding: '12px', background: '#fff', color: '#64748B', border: '1px solid #EDE0E0', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>キャンセル</button>
+          </div>
+        </div>
+      )}
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
       {showPolicy && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -387,7 +399,6 @@ export default function PostJobPage() {
         </div>
       </form>
     </div>
-    )
-  </div>
+    </>
   )
 }
