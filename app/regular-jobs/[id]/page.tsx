@@ -90,8 +90,6 @@ export default function RegularJobDetailPage() {
     setApplying(true)
     await supabase.from('applications').insert({ job_id: job.id, nurse_id: currentUserId })
 
-    // 施設のメールアドレスを取得してメール通知
-    const { data: facilityAuth } = await supabase.auth.admin ? null : null
     await fetch('/api/regular-job-apply-notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
