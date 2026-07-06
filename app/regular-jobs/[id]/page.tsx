@@ -86,14 +86,20 @@ export default function RegularJobDetailPage() {
   }, [id])
 
   const handleApply = async () => {
-    if (!currentUserId || applying) return
+    if (!currentUserId || applying || !job) return
     setApplying(true)
-    await supabase.from('applications').insert({ job_id: job?.id, nurse_id: currentUserId })
-    // 施設にメール通知
-    await fetch('/api/notify-message', {
+    await supabase.from('applications').insert({ job_id: job.id, nurse_id: currentUserId })
+
+    // 施設のメールアドレスを取得してメール通知
+    const { data: facilityAuth } = await supabase.auth.admin ? null : null
+    await fetch('/api/regular-job-apply-notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ applicationId: '', senderId: currentUserId, body: '正社員・パート求人に応募がありました。マイページからご確認ください。' }),
+      body: JSON.stringify({
+        facilityId: job.facility_id,
+        nurseId: currentUserId,
+        jobTitle: job.title,
+      }),
     })
     setApplied(true)
     setApplying(false)
