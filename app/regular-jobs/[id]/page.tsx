@@ -45,11 +45,21 @@ export default function RegularJobDetailPage() {
   const [job, setJob] = useState<RegularJob | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [applied, setApplied] = useState(false)
+  const [userRole, setUserRole] = useState<'nurse' | 'facility' | null>(null)
 
   useEffect(() => {
     const fetchJob = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) setCurrentUserId(user.id)
+      if (user) {
+        setCurrentUserId(user.id)
+        const { data: facility } = await supabase.from('facilities').select('id').eq('id', user.id).maybeSingle()
+        setUserRole(facility ? 'facility' : 'nurse')
+        // 応募済みチェック
+        const { data: app } = await supabase.from('applications').select('id').eq('job_id', id).eq('nurse_id', user.id).maybeSingle()
+        if (app) setApplied(true)
+      }
 
       const { data: jobData } = await supabase
         .from('regular_jobs')
@@ -74,6 +84,20 @@ export default function RegularJobDetailPage() {
     }
     fetchJob()
   }, [id])
+
+  const handleApply = async () => {
+    if (!currentUserId || applying) return
+    setApplying(true)
+    await supabase.from('applications').insert({ job_id: job?.id, nurse_id: currentUserId })
+    // 施設にメール通知
+    await fetch('/api/notify-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId: '', senderId: currentUserId, body: '正社員・パート求人に応募がありました。マイページからご確認ください。' }),
+    })
+    setApplied(true)
+    setApplying(false)
+  }
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#64748B' }}>読み込み中...</div>
   if (!job) return <div style={{ textAlign: 'center', padding: 60 }}>求人が見つかりません</div>
@@ -136,14 +160,23 @@ export default function RegularJobDetailPage() {
               💡 この求人に興味がある方は、irodori＋公式LINEにご連絡ください。<br />
               友だち追加後、求人タイトルとお名前をお送りください。
             </div>
+          ) : userRole === 'facility' ? (
+            <div style={{ background: '#F1F5F9', borderRadius: 10, padding: 16, fontSize: 13, color: C.sub }}>
+              施設アカウントでは応募できません
+            </div>
+          ) : applied ? (
+            <div style={{ textAlign: 'center', padding: 20, background: C.light, borderRadius: 10 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <div style={{ fontWeight: 700, color: C.dark }}>応募済み</div>
+              <div style={{ fontSize: 12, color: C.sub, marginTop: 4 }}>施設からの連絡をお待ちください</div>
+            </div>
+          ) : currentUserId ? (
+            <button onClick={handleApply} disabled={applying} style={{ width: '100%', padding: 16, background: applying ? '#ccc' : C.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: applying ? 'not-allowed' : 'pointer' }}>
+              {applying ? '応募中...' : 'この求人に応募する'}
+            </button>
           ) : (
-            <div style={{ background: '#F0FDF4', borderRadius: 10, padding: 16, fontSize: 13, color: '#065F46', lineHeight: 1.8 }}>
-              💬 この求人に興味がある方は、チャットからお問い合わせください。<br />
-              {currentUserId ? (
-                <span>マイページの応募履歴からチャットを開始できます。</span>
-              ) : (
-                <span>まずは<Link href='/register' style={{ color: C.primary, fontWeight: 700 }}>会員登録</Link>またはログインしてください。</span>
-              )}
+            <div style={{ textAlign: 'center', padding: 16, background: C.light, borderRadius: 10, fontSize: 13 }}>
+              応募するには<Link href='/login' style={{ color: C.primary, fontWeight: 700 }}>ログイン</Link>または<Link href='/register' style={{ color: C.primary, fontWeight: 700 }}>会員登録</Link>が必要です
             </div>
           )}
         </div>
