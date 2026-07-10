@@ -24,7 +24,7 @@ export default function AdminFeaturesPage() {
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState<Feature | null>(null)
   const [isNew, setIsNew] = useState(false)
-  const [form, setForm] = useState({ title: '', subtitle: '', content: '', image_url: '', facility_id: '', published: false })
+  const [form, setForm] = useState({ title: '', subtitle: '', content: '', image_url: '', facility_id: '', published: false, line_catch: '' })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -43,13 +43,13 @@ export default function AdminFeaturesPage() {
 
   const openNew = () => {
     setIsNew(true)
-    setForm({ title: '', subtitle: '', content: '', image_url: '', facility_id: facilities[0]?.id ?? '', published: false })
+    setForm({ title: '', subtitle: '', content: '', image_url: '', facility_id: facilities[0]?.id ?? '', published: false, line_catch: '' })
     setEditModal({} as Feature)
   }
 
   const openEdit = (f: Feature) => {
     setIsNew(false)
-    setForm({ title: f.title, subtitle: f.subtitle ?? '', content: f.content ?? '', image_url: f.image_url ?? '', facility_id: f.facility_id, published: f.published })
+    setForm({ title: f.title, subtitle: f.subtitle ?? '', content: f.content ?? '', image_url: f.image_url ?? '', facility_id: f.facility_id, published: f.published, line_catch: (f as any).line_catch ?? '' })
     setEditModal(f)
   }
 
@@ -91,19 +91,18 @@ export default function AdminFeaturesPage() {
 
     if (newPublished) {
       const { data: facilityData } = await supabase.from('facilities').select('facility_name, facility_type').eq('id', f.facility_id).single()
+      const catchCopy = (f as any).line_catch
       await fetch('/api/line-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `✨【施設特集を公開しました】✨
+          message: `🌸 沖縄の施設特集、公開しました
 
 📰 ${f.title}
-🏥 ${facilityData?.facility_name ?? ''}（${facilityData?.facility_type ?? ''}）
 
-▼ こんな方におすすめ
-${f.subtitle ?? ''}
+${catchCopy ? `「${catchCopy}...」
 
-気になる方はチェック👇
+この続きは特集ページで👇` : '詳しくはこちら👇'}
 https://irodori0305.jp/features/${f.id}`,
         }),
       })
@@ -162,6 +161,11 @@ https://irodori0305.jp/features/${f.id}`,
             </div>
 
             <div style={{ marginBottom: 24 }}>
+                            <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: C.sub, display: 'block', marginBottom: 6 }}>LINE用キャッチコピー（公開時の通知に使われます）</label>
+                <textarea value={form.line_catch} onChange={e => setForm(f => ({ ...f, line_catch: e.target.value }))} placeholder='例：有給消化率90%!スタッフの声から見えた、この施設が選ばれる理由とは' style={{ width: '100%', height: 60, padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>💡 続きが読みたくなる一文を書くとクリック率が上がります</div>
+              </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type='checkbox' checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} />
                 <span style={{ fontSize: 14, fontWeight: 600 }}>公開する</span>
