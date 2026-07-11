@@ -26,10 +26,13 @@ export default function FeatureDetailPage() {
     const fetchFeature = async () => {
       const { data } = await supabase
         .from('features')
-        .select('*, facilities(facility_name, facility_type, address)')
+        .select('*')
         .eq('id', id)
         .single()
-      if (data) setFeature(data)
+      if (data) {
+        const { data: fac } = await supabase.from('facilities').select('facility_name, facility_type, address').eq('id', data.facility_id).maybeSingle()
+        setFeature({ ...data, facilities: fac ?? null })
+      }
       setLoading(false)
     }
     fetchFeature()

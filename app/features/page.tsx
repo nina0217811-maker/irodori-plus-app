@@ -26,10 +26,16 @@ export default function FeaturesPage() {
     const fetchFeatures = async () => {
       const { data } = await supabase
         .from('features')
-        .select('*, facilities(facility_name, facility_type)')
+        .select('*')
         .eq('published', true)
         .order('created_at', { ascending: false })
-      if (data) setFeatures(data)
+      if (data && data.length > 0) {
+        const facilityIds = [...new Set(data.map((f: any) => f.facility_id))]
+        const { data: facs } = await supabase.from('facilities').select('id, facility_name, facility_type').in('id', facilityIds)
+        const fMap: Record<string, any> = {}
+        facs?.forEach((x: any) => { fMap[x.id] = x })
+        setFeatures(data.map((f: any) => ({ ...f, facilities: fMap[f.facility_id] ?? null })))
+      }
       setLoading(false)
     }
     fetchFeatures()
