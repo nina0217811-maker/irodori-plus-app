@@ -24,7 +24,9 @@ export default function AdminFeaturesPage() {
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState<Feature | null>(null)
   const [isNew, setIsNew] = useState(false)
-  const [form, setForm] = useState({ title: '', subtitle: '', content: '', image_url: '', facility_id: '', published: false, line_catch: '' })
+  const [form, setForm] = useState({ title: '', subtitle: '', content: '', image_url: '', facility_id: '', published: false, line_catch: '', linked_job_ids: [] as string[], linked_regular_job_ids: [] as string[] })
+  const [facilityJobs, setFacilityJobs] = useState<any[]>([])
+  const [facilityRegularJobs, setFacilityRegularJobs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -49,13 +51,24 @@ export default function AdminFeaturesPage() {
 
   const openNew = () => {
     setIsNew(true)
-    setForm({ title: '', subtitle: '', content: '', image_url: '', facility_id: facilities[0]?.id ?? '', published: false, line_catch: '' })
+    setForm({ title: '', subtitle: '', content: '', image_url: '', facility_id: facilities[0]?.id ?? '', published: false, line_catch: '', linked_job_ids: [], linked_regular_job_ids: [] })
     setEditModal({} as Feature)
   }
 
+  useEffect(() => {
+    const loadJobs = async () => {
+      if (!form.facility_id) { setFacilityJobs([]); setFacilityRegularJobs([]); return }
+      const { data: jobs } = await supabase.from('jobs').select('id, work_date, time_from, time_to, wage_amount').eq('facility_id', form.facility_id).eq('status', 'open').order('work_date')
+      const { data: rJobs } = await supabase.from('regular_jobs').select('id, title, salary_type, salary_amount').eq('facility_id', form.facility_id).eq('status', 'open')
+      setFacilityJobs(jobs ?? [])
+      setFacilityRegularJobs(rJobs ?? [])
+    }
+    if (editModal) loadJobs()
+  }, [form.facility_id, editModal])
+
   const openEdit = (f: Feature) => {
     setIsNew(false)
-    setForm({ title: f.title, subtitle: f.subtitle ?? '', content: f.content ?? '', image_url: f.image_url ?? '', facility_id: f.facility_id, published: f.published, line_catch: (f as any).line_catch ?? '' })
+    setForm({ title: f.title, subtitle: f.subtitle ?? '', content: f.content ?? '', image_url: f.image_url ?? '', facility_id: f.facility_id, published: f.published, line_catch: (f as any).line_catch ?? '', linked_job_ids: (f as any).linked_job_ids ?? [], linked_regular_job_ids: (f as any).linked_regular_job_ids ?? [] })
     setEditModal(f)
   }
 
@@ -171,6 +184,35 @@ https://irodori0305.jp/features/${f.id}`,
                 <label style={{ fontSize: 12, fontWeight: 600, color: C.sub, display: 'block', marginBottom: 6 }}>LINE用キャッチコピー（公開時の通知に使われます）</label>
                 <textarea value={form.line_catch} onChange={e => setForm(f => ({ ...f, line_catch: e.target.value }))} placeholder='例：有給消化率90%!スタッフの声から見えた、この施設が選ばれる理由とは' style={{ width: '100%', height: 60, padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                 <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>💡 続きが読みたくなる一文を書くとクリック率が上がります</div>
+              </div>
+
+              <div style={{ marginBottom: 14, background: '#FDF0F0', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#C45A5A', marginBottom: 8 }}>🔗 リンクする求人（任意・後から追加もOK）</div>
+                {facilityRegularJobs.length === 0 && facilityJobs.length === 0 && (
+                  <div style={{ fontSize: 12, color: '#94A3B8' }}>この施設の公開中求人はありません</div>
+                )}
+                {facilityRegularJobs.map(j => (
+                  <label key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#fff', border: `1px solid ${form.linked_regular_job_ids.includes(j.id) ? '#E07070' : '#EDE0E0'}`, borderRadius: 8, marginBottom: 6, cursor: 'pointer', fontSize: 12 }}>
+                    <input type='checkbox' checked={form.linked_regular_job_ids.includes(j.id)} onChange={e => {
+                      setForm(f => ({ ...f, linked_regular_job_ids: e.target.checked ? [...f.linked_regular_job_ids, j.id] : f.linked_regular_job_ids.filter(x => x !== j.id) }))
+                    }} style={{ accentColor: '#E07070' }} />
+                    <div>
+                      <div style={{ fontWeight: 600 }}>【{'常勤・パート'}】{j.title}</div>
+                      <div style={{ fontSize: 11, color: '#64748B' }}>{j.salary_type} ¥{j.salary_amount?.toLocaleString()}</div>
+                    </div>
+                  </label>
+                ))}
+                {facilityJobs.map(j => (
+                  <label key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#fff', border: `1px solid ${form.linked_job_ids.includes(j.id) ? '#E07070' : '#EDE0E0'}`, borderRadius: 8, marginBottom: 6, cursor: 'pointer', fontSize: 12 }}>
+                    <input type='checkbox' checked={form.linked_job_ids.includes(j.id)} onChange={e => {
+                      setForm(f => ({ ...f, linked_job_ids: e.target.checked ? [...f.linked_job_ids, j.id] : f.linked_job_ids.filter(x => x !== j.id) }))
+                    }} style={{ accentColor: '#E07070' }} />
+                    <div>
+                      <div style={{ fontWeight: 600 }}>【単発】{j.work_date} {j.time_from}〜{j.time_to}</div>
+                      <div style={{ fontSize: 11, color: '#64748B' }}>日給 ¥{j.wage_amount?.toLocaleString()}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type='checkbox' checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} />
