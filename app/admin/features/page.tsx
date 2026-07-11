@@ -34,9 +34,15 @@ export default function AdminFeaturesPage() {
   }, [])
 
   const fetchAll = async () => {
-    const { data: f } = await supabase.from('features').select('*, facilities(facility_name)').order('created_at', { ascending: false })
+    const { data: f } = await supabase.from('features').select('*').order('created_at', { ascending: false })
     const { data: fac } = await supabase.from('facilities').select('id, facility_name')
-    if (f) setFeatures(f)
+    if (f && fac) {
+      const fMap: Record<string, string> = {}
+      fac.forEach((x: any) => { fMap[x.id] = x.facility_name })
+      setFeatures(f.map((x: any) => ({ ...x, facilities: { facility_name: fMap[x.facility_id] ?? '' } })))
+    } else if (f) {
+      setFeatures(f)
+    }
     if (fac) setFacilities(fac)
     setLoading(false)
   }
