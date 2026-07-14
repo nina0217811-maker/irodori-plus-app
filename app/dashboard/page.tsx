@@ -88,7 +88,7 @@ export default function DashboardPage() {
   const [profileModal, setProfileModal] = useState<NurseProfile | null>(null)
   const [reportModal, setReportModal] = useState<{ nurseId: string; nurseName: string } | null>(null)
   const [editJobModal, setEditJobModal] = useState<Job | null>(null)
-  const [editJobForm, setEditJobForm] = useState({ work_date: '', time_from: '', time_to: '', wage_amount: '', address: '', facility_type: '', description: '' })
+  const [editJobForm, setEditJobForm] = useState({ work_date: '', time_from: '', time_to: '', wage_amount: '', address: '', facility_type: '', description: '', items_to_bring: '', dress_code: '', parking: '', lunch: '' })
   const [savingJob, setSavingJob] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetail, setReportDetail] = useState('')
@@ -294,12 +294,27 @@ export default function DashboardPage() {
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>業務内容</label>
               <textarea value={editJobForm.description} onChange={e => setEditJobForm(f => ({ ...f, description: e.target.value }))} style={{ ...inp, height: '80px', resize: 'vertical' }} />
+
+              <div style={{ background: '#FBF7F7', borderRadius: 10, padding: '12px 14px', marginTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>追加情報（任意）</div>
+                {[
+                  { key: 'items_to_bring', label: '持ち物・準備物' },
+                  { key: 'dress_code', label: '服装・身だしなみ' },
+                  { key: 'parking', label: '駐車場' },
+                  { key: 'lunch', label: '昼食' },
+                ].map(({ key, label }) => (
+                  <div key={key} style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 11, color: '#64748B', display: 'block', marginBottom: 3 }}>{label}</label>
+                    <input type='text' value={(editJobForm as any)[key]} onChange={e => setEditJobForm(f => ({ ...f, [key]: e.target.value }))} style={{ ...inp, fontSize: 13 }} />
+                  </div>
+                ))}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => setEditJobModal(null)} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', color: '#64748B', fontFamily: 'inherit' }}>キャンセル</button>
               <button onClick={async () => {
                 setSavingJob(true)
-                const { error } = await supabase.from('jobs').update({ work_date: editJobForm.work_date, time_from: editJobForm.time_from, time_to: editJobForm.time_to, wage_amount: parseInt(editJobForm.wage_amount), address: editJobForm.address, facility_type: editJobForm.facility_type, description: editJobForm.description }).eq('id', editJobModal.id)
+                const { error } = await supabase.from('jobs').update({ work_date: editJobForm.work_date, time_from: editJobForm.time_from, time_to: editJobForm.time_to, wage_amount: parseInt(editJobForm.wage_amount), address: editJobForm.address, facility_type: editJobForm.facility_type, description: editJobForm.description, items_to_bring: editJobForm.items_to_bring || null, dress_code: editJobForm.dress_code || null, parking: editJobForm.parking || null, lunch: editJobForm.lunch || null }).eq('id', editJobModal.id)
                 setSavingJob(false)
                 if (!error) { setEditJobModal(null); fetchData() } else alert('保存に失敗しました')
               }} disabled={savingJob} style={{ flex: 2, padding: '10px', background: savingJob ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -620,7 +635,7 @@ export default function DashboardPage() {
                         <button onClick={() => handleRenotify(job)} disabled={renotifying === job.id} style={S.btn('#FFF7ED', '#FED7AA', '#C2410C')}>{renotifying === job.id ? '送信中...' : '再募集通知'}</button>
                       </>
                     )}
-                    <button onClick={() => { setEditJobModal(job); setEditJobForm({ work_date: job.work_date, time_from: job.time_from, time_to: job.time_to, wage_amount: String(job.wage_amount), address: (job as any).address ?? '', facility_type: job.facility_type, description: (job as any).description ?? '' }) }} style={S.btn('#EFF6FF', '#93C5FD', '#1D4ED8')}>編集</button>
+                    <button onClick={() => { setEditJobModal(job); setEditJobForm({ work_date: job.work_date, time_from: job.time_from, time_to: job.time_to, wage_amount: String(job.wage_amount), address: (job as any).address ?? '', facility_type: job.facility_type, description: (job as any).description ?? '', items_to_bring: (job as any).items_to_bring ?? '', dress_code: (job as any).dress_code ?? '', parking: (job as any).parking ?? '', lunch: (job as any).lunch ?? '' }) }} style={S.btn('#EFF6FF', '#93C5FD', '#1D4ED8')}>編集</button>
                     <button onClick={() => handleDeleteJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
                   </div>
                 </div>
