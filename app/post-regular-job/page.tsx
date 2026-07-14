@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function PostRegularJobPage() {
+function PostRegularJobForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editId = searchParams.get('edit')
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -30,11 +32,37 @@ export default function PostRegularJobPage() {
   })
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login')
-      else setUserId(data.user.id)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { router.push('/login'); return }
+      setUserId(data.user.id)
+
+      // 編集モード：既存データを読み込み
+      if (editId) {
+        const { data: job } = await supabase.from('regular_jobs').select('*').eq('id', editId).eq('facility_id', data.user.id).maybeSingle()
+        if (job) {
+          setForm({
+            title: job.title ?? '',
+            employment_type: job.employment_type ?? '常勤',
+            salary_type: job.salary_type ?? '月給',
+            salary_amount: String(job.salary_amount ?? ''),
+            work_hours: job.work_hours ?? '',
+            work_days: job.work_days ?? '',
+            location: job.location ?? '',
+            description: job.description ?? '',
+            required_license: job.required_license ?? 'rn',
+            insurance: job.insurance ?? '',
+            transportation: job.transportation ?? '',
+            holidays: job.holidays ?? '',
+            childcare_leave: job.childcare_leave ?? '',
+            parking: job.parking ?? '',
+            training: job.training ?? '',
+            welfare: job.welfare ?? '',
+            trial_period: job.trial_period ?? '',
+          })
+        }
+      }
     })
-  }, [])
+  }, [editId])
 
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
@@ -43,7 +71,7 @@ export default function PostRegularJobPage() {
     if (!userId) return
     setLoading(true)
 
-    const { error } = await supabase.from('regular_jobs').insert({
+    const payload = {
       facility_id: userId,
       title: form.title,
       employment_type: form.employment_type,
@@ -63,7 +91,10 @@ export default function PostRegularJobPage() {
       welfare: form.welfare || null,
       trial_period: form.trial_period || null,
       status: 'open',
-    })
+    }
+    const { error } = editId
+      ? await supabase.from('regular_jobs').update(payload).eq('id', editId)
+      : await supabase.from('regular_jobs').insert(payload)
 
     if (!error) {
       await fetch('/api/line-notify', {
@@ -95,7 +126,7 @@ export default function PostRegularJobPage() {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
       <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: 13, cursor: 'pointer', marginBottom: 20 }}>← 戻る</button>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>常勤・パート求人を投稿する</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>{editId ? '常勤・パート求人を編集する' : '常勤・パート求人を投稿する'}</h1>
 
       <form onSubmit={handleSubmit} style={{ background: '#fff', borderRadius: 12, padding: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #EDE0E0' }}>
         <div style={{ marginBottom: 16 }}>
@@ -180,9 +211,18 @@ export default function PostRegularJobPage() {
         </div>
 
         <button type='submit' disabled={loading} style={{ width: '100%', padding: 14, background: loading ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
-          {loading ? '投稿中...' : '求人を投稿する'}
+          {loading ? '保存中...' : editId ? '変更を保存する' : '求人を投稿する'}
         </button>
       </form>
     </div>
+  )
+}
+
+
+export default function PostRegularJobPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: 60, color: '#64748B' }}>読み込み中...</div>}>
+      <PostRegularJobForm />
+    </Suspense>
   )
 }

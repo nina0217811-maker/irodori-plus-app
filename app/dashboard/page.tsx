@@ -693,6 +693,7 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>⏰ {job.work_hours}　📅 {job.work_days}</div>
               </div>
               <span style={job.status === 'open' ? S.badge('#D1FAE5', '#065F46') : S.badge('#F1F5F9', '#64748B')}>{job.status === 'open' ? '掲載中' : '終了'}</span>
+              <button onClick={() => router.push(`/post-regular-job?edit=${job.id}`)} style={S.btn('#EFF6FF', '#93C5FD', '#1D4ED8')}>編集</button>
               <button onClick={() => handleDeleteRegularJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
             </div>
           ))}
