@@ -181,7 +181,7 @@ export default function AdminDashboard() {
                               fetchAll()
                             }}
                             style={{
-                              padding: "3px 12px", borderRadius: "6px", border: "none", fontSize: "12px", cursor: "pointer",
+                              padding: "3px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer",
                               background: f.allow_regular_jobs ? "#065F46" : "#1a1a1a",
                               color: f.allow_regular_jobs ? "#fff" : "#888",
                               border: f.allow_regular_jobs ? "none" : "1px solid #2a2a2a",
