@@ -11,6 +11,7 @@ function PostRegularJobForm() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [planBlocked, setPlanBlocked] = useState(false)
   const [form, setForm] = useState({
     title: '',
     employment_type: '常勤',
@@ -36,7 +37,33 @@ function PostRegularJobForm() {
       if (!data.user) { router.push('/login'); return }
       setUserId(data.user.id)
 
-      // 編集モード：既存データを読み込み
+      if (!editId) {
+        const { data: facility } = await supabase
+          .from('facilities')
+          .select('subscription_plan, plan_status, created_at, allow_regular_jobs')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (facility) {
+          // allow_regular_jobs が true なら問答無用で通す（モニター・特別契約施設）
+          if (facility.allow_regular_jobs) {
+            // ブロックしない
+          } else {
+            const plan = facility.subscription_plan
+            const isActive = facility.plan_status === 'active'
+            const createdAt = new Date(facility.created_at)
+            const daysSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+            const isWithinTrial = daysSince <= 30
+            const isLightOnly = isActive && plan === 'ume'
+            const isExpiredFree = !isActive && !isWithinTrial
+
+            if (isLightOnly || isExpiredFree) {
+              setPlanBlocked(true)
+            }
+          }
+        }
+      }
+
       if (editId) {
         const { data: job } = await supabase.from('regular_jobs').select('*').eq('id', editId).eq('facility_id', data.user.id).maybeSingle()
         if (job) {
@@ -92,6 +119,7 @@ function PostRegularJobForm() {
       trial_period: form.trial_period || null,
       status: 'open',
     }
+
     const { error } = editId
       ? await supabase.from('regular_jobs').update(payload).eq('id', editId)
       : await supabase.from('regular_jobs').insert(payload)
@@ -120,6 +148,34 @@ function PostRegularJobForm() {
       <button onClick={() => router.push('/dashboard')} style={{ width: '100%', padding: 12, background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
         ダッシュボードへ
       </button>
+    </div>
+  )
+
+  if (planBlocked) return (
+    <div style={{ maxWidth: 500, margin: '80px auto', textAlign: 'center', padding: 20, fontFamily: 'sans-serif' }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, color: '#1A2235' }}>
+        常勤・パート掲載はスタンダード以上のプランで利用できます
+      </h2>
+      <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.8, marginBottom: 24 }}>
+        現在のプランでは単発求人のみ掲載可能です。<br />
+        スタンダード（¥29,800/月）へアップグレードすると<br />
+        常勤・パート求人の掲載ができるようになります。
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <button
+          onClick={() => window.open('https://irodori0305.jp/#plan', '_blank')}
+          style={{ width: '100%', padding: 13, background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+        >
+          プランを確認する
+        </button>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{ width: '100%', padding: 13, background: 'none', color: '#64748B', border: '1px solid #EDE0E0', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}
+        >
+          ダッシュボードへ戻る
+        </button>
+      </div>
     </div>
   )
 
@@ -217,7 +273,6 @@ function PostRegularJobForm() {
     </div>
   )
 }
-
 
 export default function PostRegularJobPage() {
   return (
