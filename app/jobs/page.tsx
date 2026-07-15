@@ -18,8 +18,8 @@ type Job = {
   is_urgent: boolean
   tags: string[]
   status: string
-  facility_name?: string
   address?: string
+  facility_name?: string
 }
 
 const AREAS = ['那覇市', '浦添市', '宜野湾市', '沖縄市', 'うるま市', '名護市', '糸満市', '豊見城市', '南城市', '読谷村', '恩納村', 'その他']
@@ -87,7 +87,8 @@ export default function JobsPage() {
     const merged = jobData.map(j => ({
       ...j,
       facility_name: facilityMap[j.facility_id]?.facility_name ?? '',
-      address: facilityMap[j.facility_id]?.address ?? '',
+      // jobsテーブルのaddressを優先、なければfacilitiesのaddressを使う
+      address: j.address || facilityMap[j.facility_id]?.address || '',
     }))
 
     merged.sort((a, b) => {
@@ -150,7 +151,6 @@ export default function JobsPage() {
         color: active ? '#fff' : C.sub,
         border: `1px solid ${active ? C.primary : C.border}`,
         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-        transition: 'all 0.15s',
       }}
     >
       {label}
@@ -161,9 +161,7 @@ export default function JobsPage() {
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>求人一覧</h1>
 
-      {/* 検索・フィルターエリア */}
       <div style={{ background: '#fff', borderRadius: '12px', border: `1px solid ${C.border}`, marginBottom: '20px', overflow: 'hidden' }}>
-        {/* テキスト検索 */}
         <div style={{ padding: '14px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
           <input
             placeholder='施設名・種別・勤務地で検索'
@@ -198,11 +196,8 @@ export default function JobsPage() {
           )}
         </div>
 
-        {/* フィルターパネル */}
         {filterOpen && (
           <div style={{ borderTop: `1px solid ${C.border}`, padding: '16px 16px 20px' }}>
-
-            {/* エリア */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 8 }}>📍 エリア</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -211,23 +206,14 @@ export default function JobsPage() {
                 ))}
               </div>
             </div>
-
-            {/* 給与帯 */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 8 }}>💰 給与（想定日給）</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {WAGE_RANGES.map(w => (
-                  <FilterChip
-                    key={w.label}
-                    label={w.label}
-                    active={selectedWage === w.min}
-                    onClick={() => setSelectedWage(selectedWage === w.min ? null : w.min)}
-                  />
+                  <FilterChip key={w.label} label={w.label} active={selectedWage === w.min} onClick={() => setSelectedWage(selectedWage === w.min ? null : w.min)} />
                 ))}
               </div>
             </div>
-
-            {/* 施設種別 */}
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 8 }}>🏥 施設種別</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -240,7 +226,6 @@ export default function JobsPage() {
         )}
       </div>
 
-      {/* 件数表示 */}
       <div style={{ fontSize: 13, color: C.sub, marginBottom: 14 }}>
         {loading ? '読み込み中...' : `${filtered.length}件の求人`}
         {activeFilterCount > 0 && <span style={{ color: C.primary, fontWeight: 600 }}>（絞り込み中）</span>}
@@ -271,9 +256,7 @@ export default function JobsPage() {
                 {!isFilled && (
                   <button
                     onClick={() => toggleFavorite(job.id)}
-                    style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10, background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', filter: favorites.includes(job.id) ? 'none' : 'grayscale(100%)', transition: 'transform 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.2)')}
-                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                    style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10, background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', filter: favorites.includes(job.id) ? 'none' : 'grayscale(100%)' }}
                   >
                     {favorites.includes(job.id) ? '❤️' : '🤍'}
                   </button>
@@ -285,11 +268,8 @@ export default function JobsPage() {
                     paddingTop: isFilled ? '44px' : '20px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                     border: `1px solid ${isFilled ? '#CBD5E1' : C.border}`,
-                    cursor: 'pointer', opacity: isFilled ? 0.75 : 1, transition: 'transform 0.15s',
-                  }}
-                    onMouseEnter={e => { if (!isFilled) e.currentTarget.style.transform = 'translateY(-2px)' }}
-                    onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
-                  >
+                    cursor: 'pointer', opacity: isFilled ? 0.75 : 1,
+                  }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingRight: isFilled ? '0' : '32px' }}>
                       <div>
                         <div style={{ fontWeight: '700', fontSize: '15px' }}>{job.facility_name}</div>
