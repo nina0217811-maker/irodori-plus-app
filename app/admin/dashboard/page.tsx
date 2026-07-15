@@ -28,19 +28,15 @@ export default function AdminDashboard() {
 
   async function fetchAll() {
     setLoading(true)
-
     const { data: nurseData } = await supabase.from("nurse_profiles").select("id,name,is_suspended")
-    const { data: facilityData } = await supabase.from("facilities").select("id,facility_name,plan_status,is_subscribed,subscription_plan")
+    const { data: facilityData } = await supabase.from("facilities").select("id,facility_name,plan_status,is_subscribed,subscription_plan,allow_regular_jobs")
     const { data: jobData } = await supabase.from("jobs").select("id,facility_id,status,required_count,applications(id,status)")
 
     setNurses(nurseData || [])
     setFacilities(facilityData || [])
 
     const facilityIds = [...new Set((jobData || []).map((j: any) => j.facility_id))]
-    const { data: facilityNames } = await supabase
-      .from("facilities")
-      .select("id,facility_name")
-      .in("id", facilityIds)
+    const { data: facilityNames } = await supabase.from("facilities").select("id,facility_name").in("id", facilityIds)
 
     const fnMap: Record<string, string> = {}
     ;(facilityNames || []).forEach((f: any) => { fnMap[f.id] = f.facility_name })
@@ -52,12 +48,8 @@ export default function AdminDashboard() {
       if (!fm[fid]) fm[fid] = { name: fname, jobs: 0, filledJobs: 0, applications: 0 }
       fm[fid].jobs += 1
       fm[fid].applications += (job.applications || []).length
-
-      // 定員が埋まった求人（acceptedがrequired_count以上、またはstatus=closed）
       const acceptedCount = (job.applications || []).filter((a: any) => a.status === "accepted").length
-      if (acceptedCount >= (job.required_count || 1)) {
-        fm[fid].filledJobs += 1
-      }
+      if (acceptedCount >= (job.required_count || 1)) fm[fid].filledJobs += 1
     })
 
     setJobStats(Object.values(fm))
@@ -153,6 +145,7 @@ export default function AdminDashboard() {
                     <tr>
                       <th style={th}>施設名</th>
                       <th style={th}>課金状況</th>
+                      <th style={th}>常勤・パート</th>
                       <th style={th}>求人停止</th>
                       <th style={th}>削除</th>
                     </tr>
@@ -180,6 +173,22 @@ export default function AdminDashboard() {
                             <option value="take">スタンダード</option>
                             <option value="matsu_monthly">プレミアム</option>
                           </select>
+                        </td>
+                        <td style={td}>
+                          <button
+                            onClick={async () => {
+                              await supabase.from('facilities').update({ allow_regular_jobs: !f.allow_regular_jobs }).eq('id', f.id)
+                              fetchAll()
+                            }}
+                            style={{
+                              padding: "3px 12px", borderRadius: "6px", border: "none", fontSize: "12px", cursor: "pointer",
+                              background: f.allow_regular_jobs ? "#065F46" : "#1a1a1a",
+                              color: f.allow_regular_jobs ? "#fff" : "#888",
+                              border: f.allow_regular_jobs ? "none" : "1px solid #2a2a2a",
+                            }}
+                          >
+                            {f.allow_regular_jobs ? "許可中" : "制限中"}
+                          </button>
                         </td>
                         <td style={td}>
                           <button onClick={async () => {
