@@ -14,6 +14,7 @@ type Job = {
   facility_type: string
   required_license: string
   description: string
+  address: string | null
   items_to_bring: string | null
   dress_code: string | null
   parking: string | null
@@ -29,19 +30,18 @@ type Job = {
 }
 
 const C = {
-  primary: '#E8836F',
-  primaryDark: '#B4523C',
-  primaryDeep: '#7A2A1C',
-  primaryLight: '#FDEEEA',
-  primaryBorder: '#F0DED7',
-  primaryBg: '#FFFDFB',
-  primaryMuted: '#9A4A36',
-  primarySub: '#8A6A60',
-  text: '#3D2B25',
-  textSub: '#5C4A44',
-  urgent: '#B4361F',
-  urgentBg: '#FEE2E2',
-  gold: '#F5A623',
+  primary: '#E07070',
+  primaryDark: '#C45A5A',
+  primaryDeep: '#9B3A3A',
+  primaryLight: '#FDF0F0',
+  primaryBorder: '#EDE0E0',
+  primaryBg: '#FDFAFA',
+  primaryMuted: '#8C5A5A',
+  primarySub: '#7A6060',
+  text: '#1A2235',
+  textSub: '#3D3D3D',
+  urgent: '#991B1B',
+  gold: '#D97706',
 }
 
 export default function JobDetailPage() {
@@ -117,18 +117,15 @@ export default function JobDetailPage() {
   }
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: C.primarySub }}>
-      読み込み中...
-    </div>
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: C.primarySub }}>読み込み中...</div>
   )
   if (!job) return (
-    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: C.primarySub }}>
-      求人が見つかりませんでした
-    </div>
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: C.primarySub }}>求人が見つかりませんでした</div>
   )
 
   const isFilled = job.status === 'filled'
   const estimate = calcEstimate()
+  const displayAddress = job.address || job.facilities?.address || ''
 
   const renderApplySection = () => {
     if (role === 'facility') {
@@ -170,7 +167,7 @@ export default function JobDetailPage() {
           {[
             `勤務日：${job.work_date}`,
             `時間：${job.time_from}〜${job.time_to}`,
-            `場所：${job.facilities?.address}`,
+            `場所：${displayAddress}`,
             `${job.wage_type === 'hourly' ? `時給：¥${job.wage_amount.toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}` : `日給：¥${job.wage_amount.toLocaleString()}`}`,
           ].map(item => (
             <div key={item} style={{ fontSize: '13px', color: C.text, padding: '6px 0', borderBottom: `1px solid ${C.primaryBorder}` }}>{item}</div>
@@ -195,7 +192,7 @@ export default function JobDetailPage() {
             <button
               onClick={() => { setShowConfirm(false); handleApply() }}
               disabled={applying || !agreedPolicy}
-              style={{ flex: 2, padding: '11px', background: applying || !agreedPolicy ? '#D1BAB4' : C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}
+              style={{ flex: 2, padding: '11px', background: applying || !agreedPolicy ? '#ccc' : C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}
             >
               {applying ? '応募中...' : '確認しました・応募する'}
             </button>
@@ -214,13 +211,13 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'sans-serif', background: '#FAF5F3', minHeight: '100vh' }}>
+    <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'sans-serif', background: '#F8F5F5', minHeight: '100vh' }}>
 
       {/* ヒーロー */}
       <div style={{ background: isFilled ? '#94A3B8' : C.primary, padding: '20px 20px 24px' }}>
         <button
           onClick={() => router.push('/jobs')}
-          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: '13px', cursor: 'pointer', marginBottom: '14px', padding: 0 }}
+          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.85)', fontSize: '13px', cursor: 'pointer', marginBottom: '14px', padding: 0 }}
         >
           ← 一覧に戻る
         </button>
@@ -233,22 +230,24 @@ export default function JobDetailPage() {
 
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
           {job.is_urgent && !isFilled && (
-            <span style={{ background: C.urgent, color: '#FDEEEA', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>急募</span>
+            <span style={{ background: C.urgent, color: '#fff', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>急募</span>
           )}
           {job.facility_type && (
-            <span style={{ background: 'rgba(255,255,255,0.22)', color: '#FFF6F3', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>{job.facility_type}</span>
+            <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>{job.facility_type}</span>
           )}
           {job.tags && job.tags.map(tag => (
-            <span key={tag} style={{ background: 'rgba(255,255,255,0.18)', color: '#FFF6F3', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>{tag}</span>
+            <span key={tag} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>{tag}</span>
           ))}
         </div>
 
         <div style={{ fontSize: '20px', fontWeight: '600', color: '#FFFFFF', lineHeight: '1.3', marginBottom: '4px' }}>
           {job.facilities?.facility_name}
         </div>
-        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-          {job.facilities?.address}
-        </div>
+        {displayAddress && (
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>
+            {displayAddress}
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '16px' }}>
@@ -260,7 +259,7 @@ export default function JobDetailPage() {
               <div style={{ fontSize: '11px', color: C.primaryMuted, marginBottom: '2px' }}>
                 {job.wage_type === 'hourly' ? '時給（税込・振込）' : '日給（税込・振込）'}
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '600', color: isFilled ? '#94A3B8' : C.primaryDeep }}>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: isFilled ? '#94A3B8' : C.primary }}>
                 ¥{job.wage_amount.toLocaleString()}
               </div>
               {job.wage_type === 'hourly' && estimate && (
@@ -305,7 +304,6 @@ export default function JobDetailPage() {
         <div style={{ background: '#FFFFFF', border: `0.5px solid ${C.primaryBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
           <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '10px' }}>業務内容</div>
           <p style={{ fontSize: '14px', lineHeight: '1.8', color: C.textSub, margin: 0 }}>{job.description}</p>
-
           {[
             { label: '持ち物・準備物', value: job.items_to_bring },
             { label: '服装・身だしなみ', value: job.dress_code },
@@ -319,20 +317,19 @@ export default function JobDetailPage() {
           ))}
         </div>
 
-        {/* 応募エリア（確認画面 or 応募済みなど） */}
+        {/* 応募エリア */}
         <div style={{ marginBottom: '14px' }}>
           {renderApplySection()}
         </div>
 
       </div>
 
-      {/* 下部追従バー（確認画面・応募済み・施設以外に表示） */}
+      {/* 下部追従バー */}
       {!showConfirm && !applied && !isFilled && role !== 'facility' && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           background: '#FFFFFF', borderTop: `0.5px solid ${C.primaryBorder}`,
           padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px',
-          maxWidth: '720px', margin: '0 auto',
           zIndex: 50,
         }}>
           <div style={{ flex: 1 }}>
