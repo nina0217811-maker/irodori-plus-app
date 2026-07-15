@@ -28,6 +28,22 @@ type Job = {
   }
 }
 
+const C = {
+  primary: '#E8836F',
+  primaryDark: '#B4523C',
+  primaryDeep: '#7A2A1C',
+  primaryLight: '#FDEEEA',
+  primaryBorder: '#F0DED7',
+  primaryBg: '#FFFDFB',
+  primaryMuted: '#9A4A36',
+  primarySub: '#8A6A60',
+  text: '#3D2B25',
+  textSub: '#5C4A44',
+  urgent: '#B4361F',
+  urgentBg: '#FEE2E2',
+  gold: '#F5A623',
+}
+
 export default function JobDetailPage() {
   const { id } = useParams()
   const router = useRouter()
@@ -39,14 +55,6 @@ export default function JobDetailPage() {
   const [role, setRole] = useState<'nurse' | 'facility' | null>(null)
   const [message, setMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
   const [agreedPolicy, setAgreedPolicy] = useState(false)
 
   useEffect(() => {
@@ -99,7 +107,6 @@ export default function JobDetailPage() {
     setApplying(false)
   }
 
-  // 時給の場合の想定日給
   const calcEstimate = () => {
     if (!job || job.wage_type !== 'hourly') return null
     const [fh, fm] = job.time_from.split(':').map(Number)
@@ -109,72 +116,87 @@ export default function JobDetailPage() {
     return Math.round(job.wage_amount * hours)
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: '#64748B' }}>読み込み中...</div>
-  if (!job) return <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: '#64748B' }}>求人が見つかりませんでした</div>
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: C.primarySub }}>
+      読み込み中...
+    </div>
+  )
+  if (!job) return (
+    <div style={{ textAlign: 'center', padding: '80px', fontFamily: 'sans-serif', color: C.primarySub }}>
+      求人が見つかりませんでした
+    </div>
+  )
 
   const isFilled = job.status === 'filled'
   const estimate = calcEstimate()
 
-  const renderApplyArea = () => {
+  const renderApplySection = () => {
     if (role === 'facility') {
       return (
-        <div style={{ textAlign: 'center', padding: '20px', background: '#F1F5F9', borderRadius: '10px' }}>
-          <div style={{ fontSize: '13px', color: '#64748B' }}>施設アカウントでは応募できません</div>
+        <div style={{ textAlign: 'center', padding: '16px', background: '#F1F5F9', borderRadius: '10px', fontSize: '13px', color: '#64748B' }}>
+          施設アカウントでは応募できません
         </div>
       )
     }
     if (isFilled) {
       return (
-        <div style={{ textAlign: 'center', padding: '20px', background: '#F1F5F9', borderRadius: '10px' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</div>
-          <div style={{ fontWeight: '700', color: '#64748B', marginBottom: '4px' }}>募集終了</div>
+        <div style={{ textAlign: 'center', padding: '16px', background: '#F1F5F9', borderRadius: '10px' }}>
+          <div style={{ fontWeight: '600', color: '#64748B', marginBottom: '4px' }}>募集終了</div>
           <div style={{ fontSize: '12px', color: '#94A3B8' }}>この求人は募集人数に達しました</div>
         </div>
       )
     }
     if (applied) {
       return (
-        <div style={{ textAlign: 'center', padding: '20px', background: '#FDF0F0', borderRadius: '10px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
-          <div style={{ fontWeight: '700', color: '#C45A5A' }}>応募済み</div>
-          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>施設からの返信をお待ちください</div>
+        <div style={{ textAlign: 'center', padding: '16px', background: C.primaryLight, borderRadius: '10px' }}>
+          <div style={{ fontWeight: '600', color: C.primaryDark, marginBottom: '4px' }}>応募済み</div>
+          <div style={{ fontSize: '12px', color: C.primarySub, marginBottom: '12px' }}>施設からの返信をお待ちください</div>
           <button
             onClick={async () => {
               const { data } = await supabase.from('applications').select('id').eq('job_id', id).eq('nurse_id', userId).single()
               if (data) router.push(`/chat/${data.id}`)
             }}
-            style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginTop: '12px' }}
+            style={{ width: '100%', padding: '12px', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
           >
-            💬 施設とチャットする
+            施設とチャットする
           </button>
         </div>
       )
     }
     if (showConfirm) {
       return (
-        <div style={{ background: '#FDF0F0', borderRadius: '10px', padding: '16px' }}>
-          <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#1A2235' }}>応募前に確認してください</div>
+        <div style={{ background: C.primaryLight, borderRadius: '10px', padding: '16px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: C.text }}>応募前に確認してください</div>
           {[
-            `📅 勤務日：${job.work_date}`,
-            `⏰ 時間：${job.time_from}〜${job.time_to}`,
-            `📍 場所：${job.facilities?.address}`,
-            `💰 ${job.wage_type === 'hourly' ? `時給：¥${job.wage_amount.toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}` : `日給：¥${job.wage_amount.toLocaleString()}`}`,
+            `勤務日：${job.work_date}`,
+            `時間：${job.time_from}〜${job.time_to}`,
+            `場所：${job.facilities?.address}`,
+            `${job.wage_type === 'hourly' ? `時給：¥${job.wage_amount.toLocaleString()}${estimate ? `（想定日給 ¥${estimate.toLocaleString()}）` : ''}` : `日給：¥${job.wage_amount.toLocaleString()}`}`,
           ].map(item => (
-            <div key={item} style={{ fontSize: '13px', color: '#1A2235', padding: '4px 0', borderBottom: '1px solid #EDE0E0' }}>{item}</div>
+            <div key={item} style={{ fontSize: '13px', color: C.text, padding: '6px 0', borderBottom: `1px solid ${C.primaryBorder}` }}>{item}</div>
           ))}
-          <div style={{ marginTop: '12px', background: '#FFF7ED', borderRadius: '8px', padding: '12px', marginBottom: '12px', fontSize: '12px', lineHeight: '1.8', color: '#1A2235' }}>
-            <div style={{ fontWeight: '700', color: '#C45A5A', marginBottom: '6px' }}>【キャンセルポリシー】</div>
-            <div>✅ 勤務24時間前までのキャンセルは無料</div>
-            <div>⚠️ 勤務12時間前以降は直前キャンセルとして記録</div>
-            <div>❌ 無断欠勤・連絡不履行はアカウント停止</div>
+          <div style={{ marginTop: '12px', background: '#FFF7ED', borderRadius: '8px', padding: '12px', marginBottom: '12px', fontSize: '12px', lineHeight: '1.8', color: C.text }}>
+            <div style={{ fontWeight: '600', color: C.primaryDark, marginBottom: '6px' }}>キャンセルポリシー</div>
+            <div>・勤務24時間前までのキャンセルは無料</div>
+            <div>・勤務12時間前以降は直前キャンセルとして記録</div>
+            <div>・無断欠勤・連絡不履行はアカウント停止</div>
           </div>
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
-            <input type='checkbox' checked={agreedPolicy} onChange={e => setAgreedPolicy(e.target.checked)} style={{ marginTop: '2px', flexShrink: 0 }} />
-            <span style={{ fontSize: '12px', color: '#1A2235', lineHeight: '1.6' }}>キャンセルポリシーを確認し、確実に勤務できる場合のみ応募します</span>
+            <input type="checkbox" checked={agreedPolicy} onChange={e => setAgreedPolicy(e.target.checked)} style={{ marginTop: '2px', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: C.text, lineHeight: '1.6' }}>キャンセルポリシーを確認し、確実に勤務できる場合のみ応募します</span>
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => { setShowConfirm(false); setAgreedPolicy(false) }} style={{ flex: 1, padding: '10px', background: '#fff', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}>戻る</button>
-            <button onClick={() => { setShowConfirm(false); handleApply() }} disabled={applying || !agreedPolicy} style={{ flex: 2, padding: '10px', background: applying || !agreedPolicy ? '#ccc' : '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}>
+            <button
+              onClick={() => { setShowConfirm(false); setAgreedPolicy(false) }}
+              style={{ flex: 1, padding: '11px', background: '#fff', color: C.primarySub, border: `1px solid ${C.primaryBorder}`, borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+            >
+              戻る
+            </button>
+            <button
+              onClick={() => { setShowConfirm(false); handleApply() }}
+              disabled={applying || !agreedPolicy}
+              style={{ flex: 2, padding: '11px', background: applying || !agreedPolicy ? '#D1BAB4' : C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: applying || !agreedPolicy ? 'not-allowed' : 'pointer' }}
+            >
               {applying ? '応募中...' : '確認しました・応募する'}
             </button>
           </div>
@@ -182,105 +204,153 @@ export default function JobDetailPage() {
       )
     }
     return (
-      <button onClick={() => setShowConfirm(true)} style={{ width: '100%', padding: '14px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>
+      <button
+        onClick={() => setShowConfirm(true)}
+        style={{ width: '100%', padding: '14px', background: C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
+      >
         この求人に応募する
       </button>
     )
   }
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
-      <button onClick={() => router.push('/jobs')} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '13px', cursor: 'pointer', marginBottom: '16px' }}>← 一覧に戻る</button>
+    <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'sans-serif', background: '#FAF5F3', minHeight: '100vh' }}>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: '24px', alignItems: 'start' }}>
-        <div>
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '16px' }}>
+      {/* ヒーロー */}
+      <div style={{ background: isFilled ? '#94A3B8' : C.primary, padding: '20px 20px 24px' }}>
+        <button
+          onClick={() => router.push('/jobs')}
+          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: '13px', cursor: 'pointer', marginBottom: '14px', padding: 0 }}
+        >
+          ← 一覧に戻る
+        </button>
 
-            {isFilled && (
-              <div style={{ background: '#64748B', color: '#fff', textAlign: 'center', padding: '8px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', fontWeight: '700' }}>
-                🎉 募集人数に達しました！ありがとうございます
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-              <div>
-                <h1 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>{job.facilities?.facility_name}</h1>
-                <div style={{ fontSize: '13px', color: '#64748B' }}>{job.facilities?.address} · {job.facility_type}</div>
-              </div>
-              {job.is_urgent && !isFilled && (
-                <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>急募</span>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#FBF7F7', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
-              {[
-                ['📅 勤務日', job.work_date],
-                ['⏰ 時間', `${job.time_from}〜${job.time_to}`],
-                ['🏥 施設種別', job.facility_type],
-                ['👩‍⚕️ 必要資格', job.required_license === 'rn' ? '正看護師' : '准看護師以上'],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '3px' }}>{label}</div>
-                  <div style={{ fontSize: '14px', fontWeight: '600' }}>{value}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748B', marginBottom: '8px' }}>業務内容</div>
-              <p style={{ fontSize: '14px', lineHeight: '1.8', color: '#1A2235' }}>{job.description}</p>
-              {[
-                { label: '持ち物・準備物', value: (job as any).items_to_bring, icon: '🎒' },
-                { label: '服装・身だしなみ', value: (job as any).dress_code, icon: '👔' },
-                { label: '駐車場', value: (job as any).parking, icon: '🚗' },
-                { label: '昼食', value: (job as any).lunch, icon: '🍱' },
-              ].filter(item => item.value).map(item => (
-                <div key={item.label} style={{ display: 'flex', gap: 8, marginTop: 10, padding: '8px 12px', background: '#FBF7F7', borderRadius: 8 }}>
-                  <span style={{ fontSize: 14 }}>{item.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 11, color: '#64748B', marginBottom: 2 }}>{item.label}</div>
-                    <div style={{ fontSize: 13, color: '#1A2235' }}>{item.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {job.tags && job.tags.length > 0 && (
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {job.tags.map(tag => (
-                  <span key={tag} style={{ background: '#F1F5F9', color: '#64748B', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' }}>{tag}</span>
-                ))}
-              </div>
-            )}
+        {isFilled && (
+          <div style={{ background: 'rgba(0,0,0,0.2)', color: '#fff', textAlign: 'center', padding: '8px', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', fontWeight: '600' }}>
+            募集人数に達しました
           </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          {job.is_urgent && !isFilled && (
+            <span style={{ background: C.urgent, color: '#FDEEEA', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>急募</span>
+          )}
+          {job.facility_type && (
+            <span style={{ background: 'rgba(255,255,255,0.22)', color: '#FFF6F3', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>{job.facility_type}</span>
+          )}
+          {job.tags && job.tags.map(tag => (
+            <span key={tag} style={{ background: 'rgba(255,255,255,0.18)', color: '#FFF6F3', fontSize: '11px', padding: '3px 10px', borderRadius: '99px' }}>{tag}</span>
+          ))}
         </div>
 
-        <div style={{ position: 'sticky', top: '80px' }}>
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '36px', fontWeight: '700', color: isFilled ? '#94A3B8' : '#E07070' }}>
-                ¥{job.wage_amount.toLocaleString()}
-              </div>
-              <div style={{ fontSize: '13px', color: '#64748B' }}>
+        <div style={{ fontSize: '20px', fontWeight: '600', color: '#FFFFFF', lineHeight: '1.3', marginBottom: '4px' }}>
+          {job.facilities?.facility_name}
+        </div>
+        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+          {job.facilities?.address}
+        </div>
+      </div>
+
+      <div style={{ padding: '16px' }}>
+
+        {/* 給与 + 4グリッド */}
+        <div style={{ background: C.primaryLight, borderRadius: '14px', padding: '16px 18px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: C.primaryMuted, marginBottom: '2px' }}>
                 {job.wage_type === 'hourly' ? '時給（税込・振込）' : '日給（税込・振込）'}
               </div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: isFilled ? '#94A3B8' : C.primaryDeep }}>
+                ¥{job.wage_amount.toLocaleString()}
+              </div>
               {job.wage_type === 'hourly' && estimate && (
-                <div style={{ fontSize: '13px', color: '#E07070', fontWeight: '600', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: C.primaryMuted, marginTop: '2px' }}>
                   想定日給 ¥{estimate.toLocaleString()}
                 </div>
               )}
             </div>
-
-            {message && (
-              <div style={{ background: applied ? '#D1FAE5' : '#FEE2E2', color: applied ? '#065F46' : '#991B1B', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', textAlign: 'center' }}>
-                {message}
-              </div>
+            {!isFilled && !applied && role !== 'facility' && (
+              <button
+                onClick={() => setShowConfirm(true)}
+                style={{ background: C.primary, color: '#fff', fontSize: '13px', fontWeight: '600', padding: '10px 18px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
+              >
+                応募する
+              </button>
             )}
+          </div>
 
-            {renderApplyArea()}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {[
+              { label: '勤務日', value: job.work_date },
+              { label: '時間', value: `${job.time_from}〜${job.time_to}` },
+              { label: '施設種別', value: job.facility_type },
+              { label: '必要資格', value: job.required_license === 'rn' ? '正看護師' : '准看護師以上' },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ background: '#FFFFFF', borderRadius: '10px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '10px', color: C.primaryMuted, marginBottom: '3px' }}>{label}</div>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: C.text }}>{value}</div>
+              </div>
+            ))}
           </div>
         </div>
+
+        {/* メッセージ */}
+        {message && (
+          <div style={{ background: applied ? '#D1FAE5' : '#FEE2E2', color: applied ? '#065F46' : '#991B1B', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '14px', textAlign: 'center' }}>
+            {message}
+          </div>
+        )}
+
+        {/* 業務内容 */}
+        <div style={{ background: '#FFFFFF', border: `0.5px solid ${C.primaryBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '10px' }}>業務内容</div>
+          <p style={{ fontSize: '14px', lineHeight: '1.8', color: C.textSub, margin: 0 }}>{job.description}</p>
+
+          {[
+            { label: '持ち物・準備物', value: job.items_to_bring },
+            { label: '服装・身だしなみ', value: job.dress_code },
+            { label: '駐車場', value: job.parking },
+            { label: '昼食', value: job.lunch },
+          ].filter(item => item.value).map(item => (
+            <div key={item.label} style={{ marginTop: '10px', padding: '10px 12px', background: C.primaryLight, borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: C.primaryMuted, marginBottom: '2px' }}>{item.label}</div>
+              <div style={{ fontSize: '13px', color: C.text }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* 応募エリア（確認画面 or 応募済みなど） */}
+        <div style={{ marginBottom: '14px' }}>
+          {renderApplySection()}
+        </div>
+
       </div>
+
+      {/* 下部追従バー（確認画面・応募済み・施設以外に表示） */}
+      {!showConfirm && !applied && !isFilled && role !== 'facility' && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          background: '#FFFFFF', borderTop: `0.5px solid ${C.primaryBorder}`,
+          padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px',
+          maxWidth: '720px', margin: '0 auto',
+          zIndex: 50,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: C.primarySub }}>{job.facilities?.facility_name}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: C.primaryDark }}>
+              ¥{job.wage_amount.toLocaleString()} / {job.wage_type === 'hourly' ? '時' : '日'}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowConfirm(true)}
+            style={{ background: C.primary, color: '#fff', fontSize: '14px', fontWeight: '600', padding: '12px 24px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
+          >
+            応募する
+          </button>
+        </div>
+      )}
+
+      <div style={{ height: '80px' }} />
     </div>
   )
 }
