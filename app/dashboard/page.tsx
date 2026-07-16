@@ -93,6 +93,7 @@ export default function DashboardPage() {
   const [reportReason, setReportReason] = useState('')
   const [reportDetail, setReportDetail] = useState('')
   const [isSubscribed, setIsSubscribed] = useState(true)
+  const [isRegularLocked, setIsRegularLocked] = useState(false)
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [reporting, setReporting] = useState(false)
   const [rejectModal, setRejectModal] = useState<{ applicationId: string, nurseId: string, nurseName: string, jobId: string } | null>(null)
@@ -147,11 +148,32 @@ export default function DashboardPage() {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) { router.push('/login'); return }
     setUserId(userData.user.id)
-    const { data: facility } = await supabase.from('facilities').select('facility_name, plan_status, is_subscribed').eq('id', userData.user.id).single()
+
+    const { data: facility } = await supabase
+      .from('facilities')
+      .select('facility_name, plan_status, is_subscribed, subscription_plan, allow_regular_jobs, created_at')
+      .eq('id', userData.user.id)
+      .single()
+
     if (facility) {
       setFacilityName(facility.facility_name)
       setIsSubscribed(facility.plan_status === 'active' || facility.is_subscribed)
+
+      // 常勤・パートのロック判定
+      if (facility.allow_regular_jobs) {
+        setIsRegularLocked(false)
+      } else {
+        const plan = facility.subscription_plan
+        const isActive = facility.plan_status === 'active'
+        const createdAt = new Date(facility.created_at)
+        const daysSince = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        const isWithinTrial = daysSince <= 30
+        const isLightOnly = isActive && plan === 'ume'
+        const isExpiredFree = !isActive && !isWithinTrial
+        setIsRegularLocked(isLightOnly || isExpiredFree)
+      }
     }
+
     const { data: jobData } = await supabase.from('jobs').select('*, applications (id, nurse_id, status)').eq('facility_id', userData.user.id)
     if (jobData) {
       setJobs(jobData)
@@ -294,15 +316,9 @@ export default function DashboardPage() {
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '5px' }}>業務内容</label>
               <textarea value={editJobForm.description} onChange={e => setEditJobForm(f => ({ ...f, description: e.target.value }))} style={{ ...inp, height: '80px', resize: 'vertical' }} />
-
               <div style={{ background: '#FBF7F7', borderRadius: 10, padding: '12px 14px', marginTop: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>追加情報（任意）</div>
-                {[
-                  { key: 'items_to_bring', label: '持ち物・準備物' },
-                  { key: 'dress_code', label: '服装・身だしなみ' },
-                  { key: 'parking', label: '駐車場' },
-                  { key: 'lunch', label: '昼食' },
-                ].map(({ key, label }) => (
+                {[{ key: 'items_to_bring', label: '持ち物・準備物' }, { key: 'dress_code', label: '服装・身だしなみ' }, { key: 'parking', label: '駐車場' }, { key: 'lunch', label: '昼食' }].map(({ key, label }) => (
                   <div key={key} style={{ marginBottom: 8 }}>
                     <label style={{ fontSize: 11, color: '#64748B', display: 'block', marginBottom: 3 }}>{label}</label>
                     <input type='text' value={(editJobForm as any)[key]} onChange={e => setEditJobForm(f => ({ ...f, [key]: e.target.value }))} style={{ ...inp, fontSize: 13 }} />
@@ -410,29 +426,17 @@ export default function DashboardPage() {
                 <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>直前キャンセル履歴</div>
               </div>
             </div>
-            {/* 口座情報 */}
             {profileModal.bank_account ? (
               <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px', border: '1px solid #BBF7D0' }}>
                 <div style={{ fontSize: '12px', fontWeight: '700', color: '#065F46', marginBottom: '10px' }}>💳 振込口座情報</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {[
-                    ['銀行名', profileModal.bank_account.bank_name],
-                    ['支店名', profileModal.bank_account.branch_name],
-                    ['口座種別', profileModal.bank_account.account_type],
-                    ['口座番号', profileModal.bank_account.account_number],
-                    ['口座名義', profileModal.bank_account.account_holder],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235' }}>{value}</div>
-                    </div>
+                  {[['銀行名', profileModal.bank_account.bank_name], ['支店名', profileModal.bank_account.branch_name], ['口座種別', profileModal.bank_account.account_type], ['口座番号', profileModal.bank_account.account_number], ['口座名義', profileModal.bank_account.account_holder]].map(([label, value]) => (
+                    <div key={label}><div style={{ fontSize: '10px', color: '#64748B', marginBottom: '2px' }}>{label}</div><div style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235' }}>{value}</div></div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', fontSize: '12px', color: '#94A3B8' }}>
-                💳 口座情報未登録
-              </div>
+              <div style={{ background: '#FBF7F7', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', fontSize: '12px', color: '#94A3B8' }}>💳 口座情報未登録</div>
             )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => { const name = profileModal.name ?? '不明'; const nurseId = profileModal.nurseId ?? ''; setProfileModal(null); setReportModal({ nurseId, nurseName: name }) }} style={{ flex: 1, padding: '10px', background: 'none', border: '1.5px solid #ef4444', color: '#ef4444', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>通報</button>
@@ -463,10 +467,7 @@ export default function DashboardPage() {
 
       {/* ===== 未契約バナー ===== */}
       {!isSubscribed && (
-        <div
-          onClick={() => setShowPlanModal(true)}
-          style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-        >
+        <div onClick={() => setShowPlanModal(true)} style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#92400E' }}>プランに加入して求人を掲載しましょう</div>
             <div style={{ fontSize: 12, color: '#854F0B', marginTop: 2 }}>単発求人プラン ¥11,000/月〜。タップしてプランを選択</div>
@@ -485,70 +486,35 @@ export default function DashboardPage() {
             </div>
             <p style={{ fontSize: 12, color: '#64748B', marginBottom: 20 }}>大手求人サイトは2週間で¥90,000〜。irodori+は月額で使い放題です。</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-              {/* 梅 */}
               <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div>
-                    <span style={{ background: '#FBF7F7', color: '#94A3B8', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>ライト</span>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>単発求人プラン</div>
-                  </div>
+                  <div><span style={{ background: '#FBF7F7', color: '#94A3B8', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>ライト</span><div style={{ fontSize: 15, fontWeight: 700 }}>単発求人プラン</div></div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥11,000<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
                 </div>
-                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
-                  単発求人を無制限掲載・看護師への即時LINE通知・チャット・支払い明細管理
-                </div>
-                <button onClick={() => { setShowPlanModal(false); handleSubscribe('ume') }} style={{ width: '100%', padding: '10px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ライトプランで始める
-                </button>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>単発求人を無制限掲載・看護師への即時LINE通知・チャット・支払い明細管理</div>
+                <button onClick={() => { setShowPlanModal(false); handleSubscribe('ume') }} style={{ width: '100%', padding: '10px', background: '#fff', color: '#E07070', border: '1.5px solid #E07070', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>ライトプランで始める</button>
               </div>
-
-              {/* 竹 */}
               <div style={{ background: '#FDF0F0', border: '2px solid #E07070', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div>
-                    <span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>スタンダード・おすすめ</span>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>正社員・パート求人プラン</div>
-                  </div>
+                  <div><span style={{ background: '#E07070', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>スタンダード・おすすめ</span><div style={{ fontSize: 15, fontWeight: 700 }}>正社員・パート求人プラン</div></div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥29,800<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
                 </div>
-                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
-                  単発 + 正社員・パート求人掲載・引き抜きOK・チャット・支払い明細管理
-                </div>
-                <button onClick={() => { setShowPlanModal(false); handleSubscribe('take') }} style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  スタンダードプランで始める
-                </button>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>単発 + 正社員・パート求人掲載・引き抜きOK・チャット・支払い明細管理</div>
+                <button onClick={() => { setShowPlanModal(false); handleSubscribe('take') }} style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>スタンダードプランで始める</button>
               </div>
-
-              {/* 松 */}
               <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div>
-                    <span style={{ background: '#1A2235', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>プレミアム・採用ブランディング</span>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>プレミアムプラン</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>初期¥66,000</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>+ 月額¥39,800</div>
-                  </div>
+                  <div><span style={{ background: '#1A2235', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>プレミアム・採用ブランディング</span><div style={{ fontSize: 15, fontWeight: 700 }}>プレミアムプラン</div></div>
+                  <div style={{ textAlign: 'right' }}><div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>初期¥66,000</div><div style={{ fontSize: 13, fontWeight: 700, color: '#E07070' }}>+ 月額¥39,800</div></div>
                 </div>
-                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>
-                  竹の全機能 + 特集ページ作成 + irodori公式SNS投稿 + 引き抜きOK
-                </div>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>竹の全機能 + 特集ページ作成 + irodori公式SNS投稿 + 引き抜きOK</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('matsu_initial') }} style={{ flex: 1, padding: '10px', background: '#fff', color: '#1A2235', border: '1.5px solid #1A2235', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    初期費用を支払う
-                  </button>
-                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('matsu_monthly') }} style={{ flex: 1, padding: '10px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    月額を支払う
-                  </button>
+                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('matsu_initial') }} style={{ flex: 1, padding: '10px', background: '#fff', color: '#1A2235', border: '1.5px solid #1A2235', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>初期費用を支払う</button>
+                  <button onClick={() => { setShowPlanModal(false); handleSubscribe('matsu_monthly') }} style={{ flex: 1, padding: '10px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>月額を支払う</button>
                 </div>
               </div>
-
             </div>
-            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 16, textAlign: 'center' }}>
-              ご不明な点は info@irodori0305.jp までお問い合わせください
-            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 16, textAlign: 'center' }}>ご不明な点は info@irodori0305.jp までお問い合わせください</div>
           </div>
         </div>
       )}
@@ -563,15 +529,21 @@ export default function DashboardPage() {
           {(() => {
             const now = new Date()
             return (
-              <button
-                onClick={() => window.open(`/dashboard/payslip?year=${now.getFullYear()}&month=${now.getMonth() + 1}&facilityId=${userId}`, '_blank')}
-                style={{ padding: '8px 16px', background: '#fff', color: '#64748B', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}
-              >
+              <button onClick={() => window.open(`/dashboard/payslip?year=${now.getFullYear()}&month=${now.getMonth() + 1}&facilityId=${userId}`, '_blank')} style={{ padding: '8px 16px', background: '#fff', color: '#64748B', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                 📄 今月の支払い明細
               </button>
             )
           })()}
-          <button onClick={() => router.push('/post-regular-job')} style={{ padding: '8px 16px', background: '#fff', color: '#E07070', border: '1px solid #E07070', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 常勤・パート</button>
+          {/* 常勤・パートボタン: ロック中はグレー鍵 */}
+          {isRegularLocked ? (
+            <button onClick={() => setShowPlanModal(true)} style={{ padding: '8px 16px', background: '#F1F5F9', color: '#94A3B8', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              🔒 常勤・パート
+            </button>
+          ) : (
+            <button onClick={() => router.push('/post-regular-job')} style={{ padding: '8px 16px', background: '#fff', color: '#E07070', border: '1px solid #E07070', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+              ＋ 常勤・パート
+            </button>
+          )}
           <button onClick={() => router.push('/post-job')} style={{ padding: '8px 16px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 単発求人を投稿</button>
           {userId === '2f22fea3-4f1f-4fac-9053-1f8d4b14f523' && (
             <button onClick={() => router.push('/admin/dashboard')} style={{ padding: '8px 16px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>管理画面</button>
@@ -591,7 +563,6 @@ export default function DashboardPage() {
 
       {/* ===== 単発求人リスト ===== */}
       <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>掲載中の求人</div>
-
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>読み込み中...</div>
       ) : jobs.length === 0 ? (
@@ -605,16 +576,9 @@ export default function DashboardPage() {
           {jobs.map(job => {
             const wageLabel = (job.wage_type === 'hourly' ? '時給' : '日給') + ` ¥${job.wage_amount?.toLocaleString()}`
             const statusLabel = job.status === 'open' ? '掲載中' : job.status === 'filled' ? '満員' : '終了'
-            const statusStyle = job.status === 'open'
-              ? S.badge('#FDF0F0', '#991B1B')
-              : job.status === 'filled'
-              ? S.badge('#EDE9FB', '#3C3489')
-              : S.badge('#F1F5F9', '#475569')
             const borderLeft = job.status === 'open' ? '3px solid #E07070' : job.status === 'filled' ? '3px solid #7F77DD' : '3px solid #CBD5E1'
-
             return (
               <div key={job.id} style={{ ...S.card, borderLeft, borderRadius: '0 12px 12px 0' }}>
-                {/* 求人ヘッダー */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -624,8 +588,7 @@ export default function DashboardPage() {
                       {job.is_urgent && job.status === 'open' && <span style={S.badge('#FEE2E2', '#991B1B')}>急募</span>}
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748B', marginTop: '5px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
-                      <span>{wageLabel}</span>
-                      <span>{job.facility_type}</span>
+                      <span>{wageLabel}</span><span>{job.facility_type}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
@@ -639,8 +602,6 @@ export default function DashboardPage() {
                     <button onClick={() => handleDeleteJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
                   </div>
                 </div>
-
-                {/* 応募者リスト */}
                 {job.applications?.length > 0 && (
                   <>
                     <div style={S.divider} />
@@ -653,12 +614,8 @@ export default function DashboardPage() {
                       return (
                         <div key={app.id} style={{ ...S.row, borderBottom: idx === job.applications.length - 1 ? 'none' : '0.5px solid #F1F5F9' }}>
                           <div style={S.avatar}>{nurseName?.charAt(0) ?? '?'}</div>
-                          <button onClick={() => handleViewProfile(app.nurse_id)} style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', flex: 1, textAlign: 'left' }}>
-                            {nurseName}
-                          </button>
-                          <span style={isAccepted ? S.badge('#D1FAE5', '#064E3B') : isRejected ? S.badge('#F1F5F9', '#475569') : S.badge('#FEF3DC', '#7A4D00')}>
-                            {isAccepted ? '採用確定' : isRejected ? '不採用済み' : '審査中'}
-                          </span>
+                          <button onClick={() => handleViewProfile(app.nurse_id)} style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', flex: 1, textAlign: 'left' }}>{nurseName}</button>
+                          <span style={isAccepted ? S.badge('#D1FAE5', '#064E3B') : isRejected ? S.badge('#F1F5F9', '#475569') : S.badge('#FEF3DC', '#7A4D00')}>{isAccepted ? '採用確定' : isRejected ? '不採用済み' : '審査中'}</span>
                           {!isAccepted && !isRejected && <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)} style={S.btn('#E07070', '#C45A5A', '#fff')}>採用する</button>}
                           {!isAccepted && !isRejected && <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={S.btn('#fff', '#FCA5A5', '#991B1B')}>不採用</button>}
                           {isAccepted && <button onClick={() => router.push(`/chat/${app.id}`)} style={S.btn('#EDE9FB', '#7F77DD', '#26215C')}>チャット</button>}
@@ -676,8 +633,35 @@ export default function DashboardPage() {
       )}
 
       {/* ===== 常勤・パート ===== */}
-      <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>常勤・パート求人</div>
-      {regularJobs.length === 0 ? (
+      <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        常勤・パート求人
+        {isRegularLocked && <span style={{ background: '#F1F5F9', color: '#94A3B8', fontSize: '11px', padding: '2px 8px', borderRadius: '99px', fontWeight: '400' }}>スタンダード以上</span>}
+      </div>
+
+      {isRegularLocked ? (
+        // ロック表示
+        <div style={{ borderRadius: '12px', border: '1.5px dashed #E2E8F0', background: '#FAFAFA', overflow: 'hidden', position: 'relative' }}>
+          {/* ぼかしダミー */}
+          <div style={{ filter: 'blur(3px)', pointerEvents: 'none', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.4 }}>
+            {[{ title: '正看護師募集・訪問看護', type: '常勤', salary: '月給 ¥280,000', location: '那覇市', hours: '09:00〜18:00', days: '月〜金' }, { title: 'パート看護師募集', type: 'パート', salary: '時給 ¥1,800', location: '浦添市', hours: '10:00〜15:00', days: '週3日〜' }].map((j, i) => (
+              <div key={i} style={{ background: '#fff', borderRadius: '10px', padding: '14px 18px', border: '0.5px solid #EDE0E0' }}>
+                <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '2px' }}>{j.title}</div>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>{j.type} · {j.salary} · {j.location}</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>⏰ {j.hours}　📅 {j.days}</div>
+              </div>
+            ))}
+          </div>
+          {/* オーバーレイ */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(250,250,250,0.8)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', fontSize: '22px' }}>🔒</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>スタンダード以上で利用できます</div>
+            <div style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '16px', textAlign: 'center', lineHeight: 1.6 }}>常勤・パート求人の掲載は<br />スタンダード（¥29,800/月）から</div>
+            <button onClick={() => setShowPlanModal(true)} style={{ padding: '9px 22px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+              プランを確認する
+            </button>
+          </div>
+        </div>
+      ) : regularJobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', background: '#fff', borderRadius: '12px', border: '0.5px solid #EDE0E0', color: '#64748B' }}>
           <div style={{ fontSize: '28px', marginBottom: '10px' }}>📄</div>
           <div style={{ fontWeight: '600', marginBottom: '8px' }}>常勤・パート求人がありません</div>
