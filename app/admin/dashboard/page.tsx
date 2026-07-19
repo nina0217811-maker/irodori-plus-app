@@ -273,7 +273,7 @@ function SalesTab({ facilities }: { facilities: any[] }) {
   if (loading) return <div style={{ color: "#888", padding: "40px", textAlign: "center" }}>Stripeデータ取得中...</div>
 
   const activeCount = sales?.activeSubscriptions ?? 0
-  const mrr = activeCount * 10000
+  const mrr = facilities.filter(f => f.plan_status === "active").reduce((sum, f) => { const prices: Record<string, number> = { ume: 11000, take: 29800, matsu_monthly: 39800 }; return sum + (prices[f.subscription_plan] ?? 0) }, 0)
 
   return (
     <div>
