@@ -62,6 +62,15 @@ type NurseProfile = {
 
 const REJECT_REASONS = ['応募要件と合わなかった', '定員に達した', '求人を取り下げた', 'その他']
 
+const CANCEL_REASONS = [
+  '採用が決まった',
+  '費用が高い',
+  '応募が来なかった',
+  '使いにくかった',
+  'サービスが期待と違った',
+  'その他',
+]
+
 const S = {
   card: { background: '#fff', border: '0.5px solid #EDE0E0', borderRadius: '12px', padding: '16px 20px', marginBottom: '12px' } as React.CSSProperties,
   badge: (bg: string, color: string) => ({ display: 'inline-flex', alignItems: 'center', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '500', background: bg, color } as React.CSSProperties),
@@ -99,6 +108,11 @@ export default function DashboardPage() {
   const [rejectModal, setRejectModal] = useState<{ applicationId: string, nurseId: string, nurseName: string, jobId: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejecting, setRejecting] = useState(false)
+  // 解約関連
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelDetail, setCancelDetail] = useState('')
+  const [canceling, setCanceling] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -108,6 +122,26 @@ export default function DashboardPage() {
     const res = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ facilityId: user.id, facilityName, email: user.email, plan }) })
     const { url } = await res.json()
     if (url) window.location.href = url
+  }
+
+  const handleCancelPlan = async () => {
+    if (!cancelReason || !userId) return
+    setCanceling(true)
+    const res = await fetch('/api/cancel-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ facilityId: userId, reason: cancelReason, detail: cancelDetail }),
+    })
+    if (res.ok) {
+      setShowCancelModal(false)
+      setCancelReason('')
+      setCancelDetail('')
+      alert('解約申請を受け付けました。現在の契約期間終了後に解約されます。')
+      fetchData()
+    } else {
+      alert('解約処理に失敗しました。お手数ですが info@irodori0305.jp までご連絡ください。')
+    }
+    setCanceling(false)
   }
 
   const handleDeleteJob = async (jobId: string) => {
@@ -159,7 +193,6 @@ export default function DashboardPage() {
       setFacilityName(facility.facility_name)
       setIsSubscribed(facility.plan_status === 'active' || facility.is_subscribed)
 
-      // 常勤・パートのロック判定
       if (facility.allow_regular_jobs) {
         setIsRegularLocked(false)
       } else {
@@ -252,7 +285,56 @@ export default function DashboardPage() {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px', fontFamily: 'sans-serif' }}>
 
-      {/* ===== モーダル群 ===== */}
+      {/* ===== 解約モーダル ===== */}
+      {showCancelModal && (
+        <div style={{ ...modalBase, zIndex: 600 }}>
+          <div style={modalBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#1A2235' }}>プランの解約</h2>
+              <button onClick={() => { setShowCancelModal(false); setCancelReason(''); setCancelDetail('') }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px', lineHeight: 1.7 }}>
+              解約すると現在の契約期間終了後にプランが停止されます。<br />
+              よろしければ解約理由をお聞かせください。
+            </p>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', marginBottom: '10px' }}>解約理由 *</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {CANCEL_REASONS.map(reason => (
+                <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${cancelReason === reason ? '#E07070' : '#EDE0E0'}`, background: cancelReason === reason ? '#FDF0F0' : '#fff' }}>
+                  <input type="radio" name="cancelReason" value={reason} checked={cancelReason === reason} onChange={() => setCancelReason(reason)} style={{ accentColor: '#E07070' }} />
+                  <span style={{ fontSize: '14px' }}>{reason}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', marginBottom: '6px' }}>その他・詳細（任意）</div>
+              <textarea
+                value={cancelDetail}
+                onChange={e => setCancelDetail(e.target.value)}
+                placeholder="サービスへのご意見・改善点などがあればご記入ください"
+                style={{ ...inp, height: '80px', resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '8px', padding: '12px 14px', marginBottom: '20px', fontSize: '12px', color: '#92400E', lineHeight: 1.7 }}>
+              ⚠️ 解約後も現在の契約期間終了日まではサービスをご利用いただけます。
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setShowCancelModal(false); setCancelReason(''); setCancelDetail('') }} style={{ flex: 1, padding: '11px', background: '#fff', color: '#64748B', border: '1.5px solid #EDE0E0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                キャンセル
+              </button>
+              <button
+                onClick={handleCancelPlan}
+                disabled={!cancelReason || canceling}
+                style={{ flex: 2, padding: '11px', background: !cancelReason || canceling ? '#ccc' : '#DC2626', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: !cancelReason || canceling ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+              >
+                {canceling ? '処理中...' : '解約を申請する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 不採用モーダル ===== */}
       {rejectModal && (
         <div style={modalBase}>
           <div style={modalBox}>
@@ -279,6 +361,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ===== 求人編集モーダル ===== */}
       {editJobModal && (
         <div style={modalBase}>
           <div style={{ ...modalBox, maxWidth: '480px' }}>
@@ -341,6 +424,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ===== 通報モーダル ===== */}
       {reportModal && (
         <div style={modalBase}>
           <div style={modalBox}>
@@ -376,6 +460,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ===== プロフィールモーダル ===== */}
       {profileModal && (
         <div style={{ ...modalBase, zIndex: 400 }}>
           <div style={modalBox}>
@@ -446,6 +531,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ===== 評価モーダル ===== */}
       {reviewModal && (
         <div style={{ ...modalBase, zIndex: 300 }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '380px' }}>
@@ -515,6 +601,17 @@ export default function DashboardPage() {
               </div>
             </div>
             <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 16, textAlign: 'center' }}>ご不明な点は info@irodori0305.jp までお問い合わせください</div>
+            {/* 解約リンク */}
+            {isSubscribed && (
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                <button
+                  onClick={() => { setShowPlanModal(false); setShowCancelModal(true) }}
+                  style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}
+                >
+                  プランを解約する
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -534,7 +631,6 @@ export default function DashboardPage() {
               </button>
             )
           })()}
-          {/* 常勤・パートボタン: ロック中はグレー鍵 */}
           {isRegularLocked ? (
             <button onClick={() => setShowPlanModal(true)} style={{ padding: '8px 16px', background: '#F1F5F9', color: '#94A3B8', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '5px' }}>
               🔒 常勤・パート
@@ -639,9 +735,7 @@ export default function DashboardPage() {
       </div>
 
       {isRegularLocked ? (
-        // ロック表示
         <div style={{ borderRadius: '12px', border: '1.5px dashed #E2E8F0', background: '#FAFAFA', overflow: 'hidden', position: 'relative' }}>
-          {/* ぼかしダミー */}
           <div style={{ filter: 'blur(3px)', pointerEvents: 'none', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px', opacity: 0.4 }}>
             {[{ title: '正看護師募集・訪問看護', type: '常勤', salary: '月給 ¥280,000', location: '那覇市', hours: '09:00〜18:00', days: '月〜金' }, { title: 'パート看護師募集', type: 'パート', salary: '時給 ¥1,800', location: '浦添市', hours: '10:00〜15:00', days: '週3日〜' }].map((j, i) => (
               <div key={i} style={{ background: '#fff', borderRadius: '10px', padding: '14px 18px', border: '0.5px solid #EDE0E0' }}>
@@ -651,7 +745,6 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          {/* オーバーレイ */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(250,250,250,0.8)' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', fontSize: '22px' }}>🔒</div>
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>スタンダード以上で利用できます</div>
@@ -681,6 +774,18 @@ export default function DashboardPage() {
               <button onClick={() => handleDeleteRegularJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ===== 解約リンク（下部） ===== */}
+      {isSubscribed && (
+        <div style={{ textAlign: 'center', marginTop: '48px', paddingTop: '24px', borderTop: '0.5px solid #EDE0E0' }}>
+          <button
+            onClick={() => setShowCancelModal(true)}
+            style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}
+          >
+            プランを解約する
+          </button>
         </div>
       )}
     </div>
