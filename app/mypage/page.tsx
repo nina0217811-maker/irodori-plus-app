@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -64,7 +64,7 @@ const STATUS: Record<string, { label: string; bg: string; color: string }> = {
   cancelled: { label: 'キャンセル済', bg: '#FEE2E2', color: '#991B1B' },
 }
 
-export default function MyPage() {
+function MyPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [tab, setTab] = useState('apps')
@@ -821,5 +821,13 @@ function ScoutList({ userId }: { userId: string }) {
         )
       })}
     </div>
+  )
+}
+
+export default function MyPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>読み込み中...</div>}>
+      <MyPageContent />
+    </Suspense>
   )
 }
