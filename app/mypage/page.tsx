@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
@@ -66,6 +66,7 @@ const STATUS: Record<string, { label: string; bg: string; color: string }> = {
 
 export default function MyPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [tab, setTab] = useState('apps')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
@@ -75,6 +76,12 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState<string | null>(null)
   const [calMonth, setCalMonth] = useState(new Date())
+  const [showPopup, setShowPopup] = useState(false)
+
+  const handleDismissPopup = () => {
+    localStorage.setItem('profile_popup_dismissed', new Date().toISOString())
+    setShowPopup(false)
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -129,6 +136,17 @@ export default function MyPage() {
           const fac = (fFacs ?? []).find((f: any) => f.id === j.facility_id)
           return { job_id: j.id, work_date: j.work_date, wage_amount: j.wage_amount, facility_name: fac?.facility_name ?? '—', facility_type: fac?.facility_type ?? '' }
         }))
+      }
+
+      // ポップアップ表示判定
+      const isComplete = !!(np?.name && np?.license && np?.areas?.length > 0 && np?.skills?.length > 0 && np?.license_url)
+      if (!isComplete) {
+        const popup = searchParams.get('popup')
+        const dismissed = localStorage.getItem('profile_popup_dismissed')
+        const dismissedAt = dismissed ? new Date(dismissed) : null
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+        const shouldShow = popup === '1' || !dismissedAt || dismissedAt < threeDaysAgo
+        if (shouldShow) setShowPopup(true)
       }
 
       setLoading(false)
@@ -192,7 +210,6 @@ export default function MyPage() {
   const monthlyIncome = applications.filter(a => a.status === 'accepted' && a.job_work_date?.startsWith(`${thisMonth.getFullYear()}-${String(thisMonth.getMonth() + 1).padStart(2, '0')}`)).reduce((sum, a) => sum + (a.job_wage || 0), 0)
   const totalIncome = applications.filter(a => a.status === 'accepted').reduce((sum, a) => sum + (a.job_wage || 0), 0)
 
-  // カレンダー
   const year = calMonth.getFullYear()
   const month = calMonth.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
@@ -206,36 +223,11 @@ export default function MyPage() {
   }
 
   const completionSteps = [
-    {
-      label: '会員登録',
-      done: true,
-      action: null,
-      message: null,
-    },
-    {
-      label: 'プロフィール入力',
-      done: !!(profile?.name && profile?.experience_years),
-      action: 'profile' as const,
-      message: '名前・経験年数を入力すると施設に見つけてもらいやすくなります',
-    },
-    {
-      label: '看護師免許証',
-      done: !!profile?.license_url,
-      action: 'profile' as const,
-      message: '免許証を提出すると施設からの信頼度が大幅アップします',
-    },
-    {
-      label: '振込口座登録',
-      done: !!(bankAccount?.bank_name && bankAccount?.account_number),
-      action: 'profile' as const,
-      message: '給与振込のために口座を登録しておきましょう',
-    },
-    {
-      label: '初回バイト完了',
-      done: applications.some(a => a.status === 'accepted'),
-      action: null,
-      message: '求人を探して最初の一歩を踏み出しましょう！',
-    },
+    { label: '会員登録', done: true, action: null, message: null },
+    { label: 'プロフィール入力', done: !!(profile?.name && profile?.experience_years), action: 'profile' as const, message: '名前・経験年数を入力すると施設に見つけてもらいやすくなります' },
+    { label: '看護師免許証', done: !!profile?.license_url, action: 'profile' as const, message: '免許証を提出すると施設からの信頼度が大幅アップします' },
+    { label: '振込口座登録', done: !!(bankAccount?.bank_name && bankAccount?.account_number), action: 'profile' as const, message: '給与振込のために口座を登録しておきましょう' },
+    { label: '初回バイト完了', done: applications.some(a => a.status === 'accepted'), action: null, message: '求人を探して最初の一歩を踏み出しましょう！' },
   ]
   const completionPct = Math.round(completionSteps.filter(s => s.done).length / completionSteps.length * 100)
 
@@ -243,6 +235,53 @@ export default function MyPage() {
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', paddingBottom: 60 }}>
+
+      {/* ===== プロフィール未完了ポップアップ ===== */}
+      {showPopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '380px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <div style={{ padding: '28px 24px 24px', borderBottom: '0.5px solid #EDE0E0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', letterSpacing: '0.1em', color: C.primary, fontWeight: '500', marginBottom: '8px', textTransform: 'uppercase' }}>Profile</div>
+                  <div style={{ fontSize: '18px', fontWeight: '500', color: C.text, lineHeight: '1.5' }}>プロフィールを<br />完成させましょう</div>
+                </div>
+                <button onClick={handleDismissPopup} style={{ background: 'none', border: 'none', fontSize: '18px', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}>✕</button>
+              </div>
+              <div style={{ fontSize: '12px', color: C.sub, lineHeight: '1.7', marginBottom: '20px' }}>
+                施設からのスカウトを受け取るために<br />あと少しの登録が必要です
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94A3B8', marginBottom: '6px' }}>
+                  <span>完了度</span>
+                  <span style={{ color: C.primary }}>{completionPct}%</span>
+                </div>
+                <div style={{ height: '3px', background: C.border, borderRadius: '99px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${completionPct}%`, background: C.primary, borderRadius: '99px' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: C.border, borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+                {completionSteps.slice(1).map(step => (
+                  <div key={step.label} style={{ background: '#fff', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: step.done ? '#F0FDF4' : '#fff', border: step.done ? '1.5px solid #86EFAC' : `1.5px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {step.done && <span style={{ fontSize: '10px', color: '#16A34A' }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: '13px', color: step.done ? '#94A3B8' : C.text, textDecoration: step.done ? 'line-through' : 'none', opacity: step.done ? 0.6 : 1 }}>{step.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={handleDismissPopup} style={{ flex: 1, padding: '12px', background: '#fff', color: '#94A3B8', border: `0.5px solid ${C.border}`, borderRadius: '10px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>あとで</button>
+                <button onClick={() => { setShowPopup(false); setTab('profile') }} style={{ flex: 2, padding: '12px', background: C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit' }}>登録を続ける</button>
+              </div>
+              <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#94A3B8' }}>3日後にまたお知らせします</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
 
         {/* プロフィールヘッダー */}
@@ -275,16 +314,15 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* 未完了バナー */}
+        {/* 未完了バナー（スタイリッシュ版） */}
         {completionPct < 100 && (
           <div
-            onClick={() => setTab('steps')}
-            style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: '10px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+            onClick={() => setShowPopup(true)}
+            style={{ background: '#fff', border: `0.5px solid ${C.border}`, borderRadius: '10px', padding: '11px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
           >
-            <div style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>
-              📋 登録があと{completionSteps.filter(s => !s.done).length}ステップ残っています
-            </div>
-            <span style={{ fontSize: 12, color: '#92400E', fontWeight: 600 }}>確認する →</span>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.primary, flexShrink: 0 }} />
+            <div style={{ flex: 1, fontSize: '13px', color: C.text }}>プロフィールが未完了です</div>
+            <span style={{ color: C.primary, fontSize: '12px', fontWeight: '500', whiteSpace: 'nowrap' }}>登録する →</span>
           </div>
         )}
 
@@ -374,7 +412,6 @@ export default function MyPage() {
               </div>
         )}
 
-        {/* お気に入り */}
         {tab === 'favs' && (
           favorites.length === 0
             ? <Empty icon="❤️" text="お気に入りした求人がありません" href="/jobs" linkLabel="求人を探す" />
@@ -395,7 +432,6 @@ export default function MyPage() {
               </div>
         )}
 
-        {/* カレンダー */}
         {tab === 'calendar' && (
           <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -427,21 +463,14 @@ export default function MyPage() {
                 return <div key={day} style={style}>{day}</div>
               })}
             </div>
-
-            {/* 凡例 */}
             <div style={{ display: 'flex', gap: 16, marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-              {[
-                { color: C.primary, label: '採用確定' },
-                { color: '#FDF0F0', label: '審査中', border: `1.5px solid ${C.primary}` },
-              ].map(({ color, label, border }) => (
+              {[{ color: C.primary, label: '採用確定' }, { color: '#FDF0F0', label: '審査中', border: `1.5px solid ${C.primary}` }].map(({ color, label, border }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.sub }}>
                   <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, border }} />
                   {label}
                 </div>
               ))}
             </div>
-
-            {/* その月の採用確定一覧 */}
             {(() => {
               const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
               const monthApps = applications.filter(a => a.status === 'accepted' && a.job_work_date?.startsWith(monthStr))
@@ -451,23 +480,13 @@ export default function MyPage() {
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>今月の採用確定 ({monthApps.length}件)</div>
                   {monthApps.map(app => (
                     <div key={app.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}`, fontSize: 13 }}>
-                      <div>
-                        <span style={{ fontWeight: 600 }}>{app.job_work_date}</span>
-                        <span style={{ color: C.sub, marginLeft: 8 }}>{app.facility_name}</span>
-                      </div>
+                      <div><span style={{ fontWeight: 600 }}>{app.job_work_date}</span><span style={{ color: C.sub, marginLeft: 8 }}>{app.facility_name}</span></div>
                       <span style={{ fontWeight: 700, color: C.primary }}>¥{app.job_wage.toLocaleString()}</span>
                     </div>
                   ))}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>
-                      合計 ¥{monthApps.reduce((sum, a) => sum + a.job_wage, 0).toLocaleString()}
-                    </span>
-                    <button
-                      onClick={() => window.open(`/mypage/payslip?year=${year}&month=${month + 1}&nurseId=${userId}`, '_blank')}
-                      style={{ padding: '6px 14px', background: C.primary, color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                    >
-                      📄 この月の明細をDL
-                    </button>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>合計 ¥{monthApps.reduce((sum, a) => sum + a.job_wage, 0).toLocaleString()}</span>
+                    <button onClick={() => window.open(`/mypage/payslip?year=${year}&month=${month + 1}&nurseId=${userId}`, '_blank')} style={{ padding: '6px 14px', background: C.primary, color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>📄 この月の明細をDL</button>
                   </div>
                 </div>
               )
@@ -475,7 +494,6 @@ export default function MyPage() {
           </div>
         )}
 
-        {/* 登録状況 */}
         {tab === 'steps' && (
           <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px' }}>
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>登録状況</div>
@@ -484,26 +502,18 @@ export default function MyPage() {
               <div key={step.label} style={{ padding: '14px 0', borderBottom: i < completionSteps.length - 1 ? `1px solid ${C.border}` : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 18, background: step.done ? '#D1FAE5' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {step.done
-                      ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span>
-                      : <span style={{ color: '#92400E', fontSize: 14 }}>{i + 1}</span>}
+                    {step.done ? <span style={{ color: '#065F46', fontSize: 16 }}>✓</span> : <span style={{ color: '#92400E', fontSize: 14 }}>{i + 1}</span>}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{step.label}</div>
-                    {!step.done && step.message && (
-                      <div style={{ fontSize: 12, color: C.sub, marginTop: 3 }}>{step.message}</div>
-                    )}
+                    {!step.done && step.message && <div style={{ fontSize: 12, color: C.sub, marginTop: 3 }}>{step.message}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     {!step.done && step.action && (
-                      <button onClick={() => setTab(step.action as any)} style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.primary, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        登録する →
-                      </button>
+                      <button onClick={() => setTab(step.action as any)} style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.primary, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>登録する →</button>
                     )}
                     {!step.done && !step.action && step.label === '初回バイト完了' && (
-                      <button onClick={() => window.location.href = '/jobs'} style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.primary, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        求人を探す →
-                      </button>
+                      <button onClick={() => window.location.href = '/jobs'} style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: C.primary, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>求人を探す →</button>
                     )}
                     <span style={{ background: step.done ? '#D1FAE5' : '#FEF3C7', color: step.done ? '#065F46' : '#92400E', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                       {step.done ? '完了' : '未完了'}
@@ -515,26 +525,11 @@ export default function MyPage() {
           </div>
         )}
 
-        {/* スカウト */}
-        {tab === 'scouts' && (
-          <ScoutList userId={userId} />
-        )}
-
-        {/* 希望条件 */}
-        {tab === 'pref' && (
-          <PreferenceForm userId={userId} />
-        )}
-
-        {/* プロフィール編集 */}
+        {tab === 'scouts' && <ScoutList userId={userId} />}
+        {tab === 'pref' && <PreferenceForm userId={userId} />}
         {tab === 'profile' && (
-          <ProfileForm
-            userId={userId}
-            initial={profile}
-            initialBank={bankAccount}
-            onSaved={(p, b) => { setProfile(p); if (b) setBankAccount(b); setTab('apps') }}
-          />
+          <ProfileForm userId={userId} initial={profile} initialBank={bankAccount} onSaved={(p, b) => { setProfile(p); if (b) setBankAccount(b); setTab('apps') }} />
         )}
-
       </div>
     </div>
   )
@@ -568,7 +563,6 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
-
   const [bankName, setBankName] = useState(initialBank?.bank_name ?? '')
   const [branchName, setBranchName] = useState(initialBank?.branch_name ?? '')
   const [accountType, setAccountType] = useState(initialBank?.account_type ?? '普通')
@@ -635,45 +629,15 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24 }}>プロフィール編集</h2>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>氏名</label>
-          <input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="田中 みなみ" />
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>資格</label>
-          <select value={license} onChange={e => setLicense(e.target.value)} style={inp}>
-            <option value="rn">正看護師</option>
-            <option value="lpn">准看護師</option>
-          </select>
-        </div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>氏名</label><input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="田中 みなみ" /></div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>資格</label><select value={license} onChange={e => setLicense(e.target.value)} style={inp}><option value="rn">正看護師</option><option value="lpn">准看護師</option></select></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>年齢</label>
-            <input type="number" value={age} onChange={e => setAge(e.target.value)} style={inp} placeholder="30" />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>性別</label>
-            <select value={gender} onChange={e => setGender(e.target.value)} style={inp}>
-              <option value="">選択してください</option>
-              <option value="女性">女性</option>
-              <option value="男性">男性</option>
-              <option value="その他">その他</option>
-              <option value="回答しない">回答しない</option>
-            </select>
-          </div>
+          <div><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>年齢</label><input type="number" value={age} onChange={e => setAge(e.target.value)} style={inp} placeholder="30" /></div>
+          <div><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>性別</label><select value={gender} onChange={e => setGender(e.target.value)} style={inp}><option value="">選択してください</option><option value="女性">女性</option><option value="男性">男性</option><option value="その他">その他</option><option value="回答しない">回答しない</option></select></div>
         </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>経験年数</label>
-          <input type="number" value={years} onChange={e => setYears(e.target.value)} style={inp} placeholder="8" />
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>活動エリア（読点区切り）</label>
-          <input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="那覇市、浦添市" />
-        </div>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label>
-          <input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" />
-        </div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>経験年数</label><input type="number" value={years} onChange={e => setYears(e.target.value)} style={inp} placeholder="8" /></div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>活動エリア（読点区切り）</label><input value={areas} onChange={e => setAreas(e.target.value)} style={inp} placeholder="那覇市、浦添市" /></div>
+        <div style={{ marginBottom: 24 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>スキル・経験（読点区切り）</label><input value={skills} onChange={e => setSkills(e.target.value)} style={inp} placeholder="内科、外科、ICU" /></div>
         <div style={{ marginBottom: 28, background: '#FBF7F7', borderRadius: 10, padding: 16, border: '1px solid #EDE0E0' }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>看護師免許証</label>
           {licenseUrl ? (
@@ -703,32 +667,12 @@ function ProfileForm({ userId, initial, initialBank, onSaved }: {
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 32px' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>振込口座情報</h2>
         <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>給与振込に使用する口座を登録してください。採用確定した施設の担当者のみ確認できます。</p>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>銀行名</label>
-          <input value={bankName} onChange={e => setBankName(e.target.value)} style={inp} placeholder="○○銀行" />
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>支店名</label>
-          <input value={branchName} onChange={e => setBranchName(e.target.value)} style={inp} placeholder="那覇支店" />
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座種別</label>
-          <select value={accountType} onChange={e => setAccountType(e.target.value)} style={inp}>
-            <option value="普通">普通</option>
-            <option value="当座">当座</option>
-          </select>
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座番号</label>
-          <input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} style={inp} placeholder="1234567" maxLength={8} />
-        </div>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座名義（カタカナ）</label>
-          <input value={accountHolder} onChange={e => setAccountHolder(e.target.value)} style={inp} placeholder="タナカ ミナミ" />
-        </div>
-        <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 12, color: '#64748B', lineHeight: 1.7 }}>
-          🔒 口座情報は採用確定した施設の担当者のみ閲覧できます。
-        </div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>銀行名</label><input value={bankName} onChange={e => setBankName(e.target.value)} style={inp} placeholder="○○銀行" /></div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>支店名</label><input value={branchName} onChange={e => setBranchName(e.target.value)} style={inp} placeholder="那覇支店" /></div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座種別</label><select value={accountType} onChange={e => setAccountType(e.target.value)} style={inp}><option value="普通">普通</option><option value="当座">当座</option></select></div>
+        <div style={{ marginBottom: 18 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座番号</label><input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} style={inp} placeholder="1234567" maxLength={8} /></div>
+        <div style={{ marginBottom: 24 }}><label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>口座名義（カタカナ）</label><input value={accountHolder} onChange={e => setAccountHolder(e.target.value)} style={inp} placeholder="タナカ ミナミ" /></div>
+        <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 12, color: '#64748B', lineHeight: 1.7 }}>🔒 口座情報は採用確定した施設の担当者のみ閲覧できます。</div>
         {bankError && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>エラー: {bankError}</div>}
         <button onClick={saveBank} disabled={bankSaving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: bankDone ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
           {bankSaving ? '保存中...' : bankDone ? '保存しました！' : '口座情報を保存する'}
@@ -742,7 +686,6 @@ function PreferenceForm({ userId }: { userId: string }) {
   const AREAS = ['那覇市', '浦添市', '宜野湾市', '沖縄市', 'うるま市', '名護市', '糸満市', '豊見城市', '南城市', '読谷村', '恩納村', 'その他']
   const FACILITY_TYPES = ['病院', 'クリニック', '介護老人保健施設', '訪問看護', 'デイサービス', '訪問入浴', 'グループホーム', '特別養護老人ホーム', '有料老人ホーム', '障害者施設', '保育園', 'その他']
   const WAGE_OPTIONS = [{ label: '指定なし', value: 0 }, { label: '¥5,000以上', value: 5000 }, { label: '¥10,000以上', value: 10000 }, { label: '¥20,000以上', value: 20000 }]
-
   const [areas, setAreas] = useState<string[]>([])
   const [facilityTypes, setFacilityTypes] = useState<string[]>([])
   const [minWage, setMinWage] = useState(0)
@@ -756,13 +699,7 @@ function PreferenceForm({ userId }: { userId: string }) {
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from('nurse_preferences').select('*').eq('nurse_id', userId).maybeSingle()
-      if (data) {
-        setAreas(data.areas ?? [])
-        setFacilityTypes(data.facility_types ?? [])
-        setMinWage(data.min_wage ?? 0)
-        setNotifyLine(data.notify_line ?? true)
-        setNotifyEmail(data.notify_email ?? true)
-      }
+      if (data) { setAreas(data.areas ?? []); setFacilityTypes(data.facility_types ?? []); setMinWage(data.min_wage ?? 0); setNotifyLine(data.notify_line ?? true); setNotifyEmail(data.notify_email ?? true) }
       const { data: np } = await supabase.from('nurse_profiles').select('job_status').eq('id', userId).maybeSingle()
       if (np?.job_status) setJobStatus(np.job_status)
       setLoading(false)
@@ -770,99 +707,47 @@ function PreferenceForm({ userId }: { userId: string }) {
     if (userId) load()
   }, [userId])
 
-  const toggle = (arr: string[], val: string, set: (v: string[]) => void) => {
-    set(arr.includes(val) ? arr.filter(a => a !== val) : [...arr, val])
-  }
+  const toggle = (arr: string[], val: string, set: (v: string[]) => void) => { set(arr.includes(val) ? arr.filter(a => a !== val) : [...arr, val]) }
 
   const save = async () => {
     setSaving(true)
     await supabase.from('nurse_profiles').update({ job_status: jobStatus }).eq('id', userId)
     const payload = { nurse_id: userId, areas, facility_types: facilityTypes, min_wage: minWage, notify_line: notifyLine, notify_email: notifyEmail, updated_at: new Date().toISOString() }
     const { data: existing } = await supabase.from('nurse_preferences').select('id').eq('nurse_id', userId).maybeSingle()
-    if (existing) {
-      await supabase.from('nurse_preferences').update(payload).eq('nurse_id', userId)
-    } else {
-      await supabase.from('nurse_preferences').insert(payload)
-    }
-    setSaving(false)
-    setDone(true)
-    setTimeout(() => setDone(false), 2000)
+    if (existing) { await supabase.from('nurse_preferences').update(payload).eq('nurse_id', userId) }
+    else { await supabase.from('nurse_preferences').insert(payload) }
+    setSaving(false); setDone(true); setTimeout(() => setDone(false), 2000)
   }
 
   if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#64748B' }}>読み込み中...</div>
 
   const chip = (label: string, active: boolean, onClick: () => void) => (
-    <button key={label} onClick={onClick} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400, background: active ? '#E07070' : '#fff', color: active ? '#fff' : '#64748B', border: `1px solid ${active ? '#E07070' : '#EDE0E0'}`, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-      {label}
-    </button>
+    <button key={label} onClick={onClick} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400, background: active ? '#E07070' : '#fff', color: active ? '#fff' : '#64748B', border: `1px solid ${active ? '#E07070' : '#EDE0E0'}`, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
   )
 
   return (
     <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #EDE0E0', padding: '28px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>希望条件設定</div>
-        <div style={{ fontSize: 13, color: '#64748B' }}>条件に合う求人が投稿されたら自動で通知します</div>
-      </div>
-
-      {/* ステータス設定 */}
+      <div><div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>希望条件設定</div><div style={{ fontSize: 13, color: '#64748B' }}>条件に合う求人が投稿されたら自動で通知します</div></div>
       <div>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🙋 今の状況</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[
-            { value: 'looking_for_part', label: 'バイト探し中', desc: '単発・スポット勤務を探しています' },
-            { value: 'looking_for_job', label: '転職活動中', desc: '正社員・パートを探しています' },
-            { value: 'looking_for_both', label: 'どちらも検討中', desc: '単発も転職もどちらも見ています' },
-            { value: 'not_looking', label: '現在募集停止中', desc: 'スカウトを受け取りたくない' },
-          ].map(s => (
+          {[{ value: 'looking_for_part', label: 'バイト探し中', desc: '単発・スポット勤務を探しています' }, { value: 'looking_for_job', label: '転職活動中', desc: '正社員・パートを探しています' }, { value: 'looking_for_both', label: 'どちらも検討中', desc: '単発も転職もどちらも見ています' }, { value: 'not_looking', label: '現在募集停止中', desc: 'スカウトを受け取りたくない' }].map(s => (
             <label key={s.value} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: `1px solid ${jobStatus === s.value ? '#E07070' : '#EDE0E0'}`, borderRadius: 10, cursor: 'pointer', background: jobStatus === s.value ? '#FDF0F0' : '#fff' }}>
               <input type="radio" name="jobStatus" value={s.value} checked={jobStatus === s.value} onChange={() => setJobStatus(s.value)} style={{ accentColor: '#E07070' }} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{s.label}</div>
-                <div style={{ fontSize: 11, color: '#64748B' }}>{s.desc}</div>
-              </div>
+              <div><div style={{ fontSize: 13, fontWeight: 600 }}>{s.label}</div><div style={{ fontSize: 11, color: '#64748B' }}>{s.desc}</div></div>
             </label>
           ))}
         </div>
       </div>
-
-      {/* エリア */}
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>📍 希望エリア（複数選択可）</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {AREAS.map(a => chip(a, areas.includes(a), () => toggle(areas, a, setAreas)))}
-        </div>
-      </div>
-
-      {/* 施設種別 */}
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🏥 希望施設種別（複数選択可）</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {FACILITY_TYPES.map(t => chip(t, facilityTypes.includes(t), () => toggle(facilityTypes, t, setFacilityTypes)))}
-        </div>
-      </div>
-
-      {/* 最低日給 */}
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>💰 希望最低日給</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {WAGE_OPTIONS.map(w => chip(w.label, minWage === w.value, () => setMinWage(w.value)))}
-        </div>
-      </div>
-
-      {/* 通知設定 */}
+      <div><div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>📍 希望エリア（複数選択可）</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{AREAS.map(a => chip(a, areas.includes(a), () => toggle(areas, a, setAreas)))}</div></div>
+      <div><div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🏥 希望施設種別（複数選択可）</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{FACILITY_TYPES.map(t => chip(t, facilityTypes.includes(t), () => toggle(facilityTypes, t, setFacilityTypes)))}</div></div>
+      <div><div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>💰 希望最低日給</div><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{WAGE_OPTIONS.map(w => chip(w.label, minWage === w.value, () => setMinWage(w.value)))}</div></div>
       <div>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>🔔 通知方法</div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
-          <input type="checkbox" checked={notifyEmail} onChange={e => setNotifyEmail(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#E07070' }} />
-          メールで通知
-        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}><input type="checkbox" checked={notifyEmail} onChange={e => setNotifyEmail(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#E07070' }} />メールで通知</label>
         <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 6 }}>※ LINEには全体通知が届きます</div>
       </div>
-
-      <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: '#64748B', lineHeight: 1.8 }}>
-        💡 条件を指定しない項目はすべての求人が対象になります
-      </div>
-
+      <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: '#64748B', lineHeight: 1.8 }}>💡 条件を指定しない項目はすべての求人が対象になります</div>
       <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: done ? '#6BAF92' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
         {saving ? '保存中...' : done ? '保存しました！' : '希望条件を保存する'}
       </button>
@@ -900,7 +785,7 @@ function ScoutList({ userId }: { userId: string }) {
     setScouts(prev => prev.map(s => s.id === scoutId ? { ...s, status } : s))
   }
 
-  const STATUS: Record<string, { label: string; bg: string; color: string }> = {
+  const ST: Record<string, { label: string; bg: string; color: string }> = {
     pending: { label: '未返答', bg: '#FEF3C7', color: '#92400E' },
     interested: { label: '興味あり', bg: '#D1FAE5', color: '#065F46' },
     declined: { label: '辞退', bg: '#F1F5F9', color: '#64748B' },
@@ -917,24 +802,15 @@ function ScoutList({ userId }: { userId: string }) {
           <div style={{ fontSize: 13 }}>希望条件を設定すると施設から見つけてもらいやすくなります</div>
         </div>
       ) : scouts.map(scout => {
-        const st = STATUS[scout.status] ?? STATUS.pending
+        const st = ST[scout.status] ?? ST.pending
         return (
           <div key={scout.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE0E0', padding: '16px 20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{scout.facility_name}</div>
-                <div style={{ fontSize: 12, color: '#64748B' }}>{new Date(scout.created_at).toLocaleDateString('ja-JP')}</div>
-              </div>
+              <div><div style={{ fontSize: 14, fontWeight: 700 }}>{scout.facility_name}</div><div style={{ fontSize: 12, color: '#64748B' }}>{new Date(scout.created_at).toLocaleDateString('ja-JP')}</div></div>
               <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
             </div>
-            <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1A2235', lineHeight: 1.7, marginBottom: scout.job ? 8 : 12 }}>
-              {scout.message}
-            </div>
-            {scout.job && (
-              <div style={{ background: '#F0FDF4', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#065F46', marginBottom: 12 }}>
-                📅 {scout.job.work_date}　⏰ {scout.job.time_from}〜{scout.job.time_to}　💰 日給¥{scout.job.wage_amount.toLocaleString()}
-              </div>
-            )}
+            <div style={{ background: '#FBF7F7', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1A2235', lineHeight: 1.7, marginBottom: scout.job ? 8 : 12 }}>{scout.message}</div>
+            {scout.job && <div style={{ background: '#F0FDF4', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#065F46', marginBottom: 12 }}>📅 {scout.job.work_date}　⏰ {scout.job.time_from}〜{scout.job.time_to}　💰 日給¥{scout.job.wage_amount.toLocaleString()}</div>}
             {scout.status === 'pending' && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => respond(scout.id, 'declined')} style={{ flex: 1, padding: '9px', background: '#fff', color: '#64748B', border: '1px solid #EDE0E0', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>辞退する</button>
