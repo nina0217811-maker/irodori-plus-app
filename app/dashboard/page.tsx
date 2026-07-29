@@ -703,44 +703,85 @@ export default function DashboardPage() {
                 {job.applications?.length > 0 && (
                   <>
                     <div style={S.divider} />
-                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '500', marginBottom: '8px' }}>応募した看護師</div>
-                    {job.applications.map((app, idx) => {
-                      const nurseName = nurseNames[app.nurse_id] || '読み込み中'
-                      const alreadyReviewed = reviews.some(r => r.nurse_id === app.nurse_id && r.job_id === job.id)
-                      const isAccepted = app.status === 'accepted'
-                      const isRejected = app.status === 'rejected'
-                      return (
-                        <div key={app.id}>
-                          <div style={{ ...S.row, borderBottom: 'none' }}>
-                            <div style={S.avatar}>{nurseName?.charAt(0) ?? '?'}</div>
-                            <button onClick={() => handleViewProfile(app.nurse_id)} style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', flex: 1, textAlign: 'left' }}>{nurseName}</button>
-                            <span style={isAccepted ? S.badge('#D1FAE5', '#064E3B') : isRejected ? S.badge('#F1F5F9', '#475569') : S.badge('#FEF3DC', '#7A4D00')}>{isAccepted ? '採用確定' : isRejected ? '不採用済み' : '審査中'}</span>
-                            {!isAccepted && !isRejected && <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)} style={S.btn('#E07070', '#C45A5A', '#fff')}>採用する</button>}
-                            {!isAccepted && !isRejected && <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={S.btn('#fff', '#FCA5A5', '#991B1B')}>不採用</button>}
-                            {isAccepted && <button onClick={() => router.push(`/chat/${app.id}`)} style={S.btn('#EDE9FB', '#7F77DD', '#26215C')}>チャット</button>}
-                            {isAccepted && !alreadyReviewed && <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })} style={S.btn('#FEF3DC', '#D97706', '#451A03')}>評価する</button>}
-                            {isAccepted && alreadyReviewed && <span style={S.badge('#F1F5F9', '#64748B')}>評価済み</span>}
+                    {(() => {
+                      const acceptedApps = job.applications.filter((a: any) => a.status === 'accepted')
+                      const pendingApps = job.applications.filter((a: any) => a.status === 'pending')
+                      const rejectedApps = job.applications.filter((a: any) => a.status === 'rejected')
+                      const hasAccepted = acceptedApps.length > 0
+                      return (<>
+                        {acceptedApps.length > 0 && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <div style={{ fontSize: '11px', color: '#065F46', fontWeight: '600', marginBottom: '8px' }}>採用確定 {acceptedApps.length}名</div>
+                            <div style={{ background: '#F0FDF4', border: '0.5px solid #BBF7D0', borderRadius: '10px', padding: '12px 14px' }}>
+                              {acceptedApps.map((app: any) => {
+                                const nurseName = nurseNames[app.nurse_id] || '読み込み中'
+                                const alreadyReviewed = reviews.some((r: any) => r.nurse_id === app.nurse_id && r.job_id === job.id)
+                                return (
+                                  <div key={app.id}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <div style={{ ...S.avatar, background: '#D1FAE5', color: '#065F46' }}>{nurseName?.charAt(0) ?? '?'}</div>
+                                      <button onClick={() => handleViewProfile(app.nurse_id)} style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', flex: 1, textAlign: 'left' as const }}>{nurseName}</button>
+                                      <button onClick={() => router.push(`/chat/${app.id}`)} style={S.btn('#EDE9FB', '#7F77DD', '#26215C')}>チャット</button>
+                                      {!alreadyReviewed && <button onClick={() => setReviewModal({ jobId: job.id, nurseId: app.nurse_id, nurseName })} style={S.btn('#FEF3DC', '#D97706', '#451A03')}>評価する</button>}
+                                      {alreadyReviewed && <span style={S.badge('#F1F5F9', '#64748B')}>評価済み</span>}
+                                    </div>
+                                    {justAccepted === app.id && (
+                                      <div style={{ marginTop: '10px', padding: '10px 12px', background: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                        <div style={{ fontSize: '12px', color: '#3C3489' }}>チャットで持ち物・集合場所を伝えましょう</div>
+                                        <button onClick={() => router.push(`/chat/${app.id}`)} style={{ padding: '6px 12px', background: '#7F77DD', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>チャットを開く →</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
-                          {/* 採用直後のチャット誘導 */}
-                          {justAccepted === app.id && (
-                            <div style={{ margin: '8px 0 4px', padding: '12px 14px', background: '#EDE9FB', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '12px', fontWeight: '600', color: '#26215C', marginBottom: '2px' }}>採用確定しました！</div>
-                                <div style={{ fontSize: '12px', color: '#3C3489' }}>チャットで持ち物・集合場所などの詳細を{nurseName}さんに伝えましょう</div>
-                              </div>
-                              <button onClick={() => router.push(`/chat/${app.id}`)} style={{ padding: '8px 14px', background: '#7F77DD', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>チャットを開く →</button>
+                        )}
+                        {pendingApps.length > 0 && (
+                          <div style={{ marginBottom: '12px' }}>
+                            <div style={{ fontSize: '11px', color: hasAccepted ? '#64748B' : '#92400E', fontWeight: '600', marginBottom: '8px' }}>
+                              {hasAccepted ? `その他の応募者 ${pendingApps.length}名（採用確定により自動不採用）` : `審査中 ${pendingApps.length}名`}
                             </div>
-                          )}
-                          {/* 審査中の次のアクション */}
-                          {!isAccepted && !isRejected && (
-                            <div style={{ margin: '4px 0', padding: '8px 12px', background: '#FEF3C7', borderRadius: '8px', fontSize: '12px', color: '#92400E' }}>
-                              プロフィールを確認して採用・不採用を決めましょう
+                            <div style={{ background: '#fff', border: '0.5px solid #EDE0E0', borderRadius: '10px', overflow: 'hidden' }}>
+                              {pendingApps.map((app: any, idx: number) => {
+                                const nurseName = nurseNames[app.nurse_id] || '読み込み中'
+                                return (
+                                  <div key={app.id} style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: idx < pendingApps.length - 1 ? '0.5px solid #F1F5F9' : 'none', opacity: hasAccepted ? 0.5 : 1 }}>
+                                    <div style={S.avatar}>{nurseName?.charAt(0) ?? '?'}</div>
+                                    <button onClick={() => handleViewProfile(app.nurse_id)} style={{ fontSize: '13px', fontWeight: '500', color: '#1A2235', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', flex: 1, textAlign: 'left' as const }}>{nurseName}</button>
+                                    {hasAccepted ? (
+                                      <span style={S.badge('#F1F5F9', '#64748B')}>不採用済み</span>
+                                    ) : (
+                                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                        <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)} style={S.btn('#E07070', '#C45A5A', '#fff')}>採用</button>
+                                        <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={S.btn('#fff', '#FCA5A5', '#991B1B')}>不採用</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
                             </div>
-                          )}
-                          {idx < job.applications.length - 1 && <div style={{ height: '0.5px', background: '#F1F5F9', margin: '6px 0' }} />}
-                        </div>
-                      )
-                    })}
+                          </div>
+                        )}
+                        {rejectedApps.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '600', marginBottom: '8px' }}>不採用済み {rejectedApps.length}名</div>
+                            <div style={{ background: '#FAFAFA', border: '0.5px solid #EDE0E0', borderRadius: '10px', overflow: 'hidden', opacity: 0.6 }}>
+                              {rejectedApps.map((app: any, idx: number) => {
+                                const nurseName = nurseNames[app.nurse_id] || '読み込み中'
+                                return (
+                                  <div key={app.id} style={{ padding: '9px 14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: idx < rejectedApps.length - 1 ? '0.5px solid #F1F5F9' : 'none' }}>
+                                    <div style={{ ...S.avatar, background: '#F1F5F9', color: '#94A3B8' }}>{nurseName?.charAt(0) ?? '?'}</div>
+                                    <span style={{ fontSize: '13px', color: '#94A3B8', textDecoration: 'line-through', flex: 1 }}>{nurseName}</span>
+                                    <span style={S.badge('#F1F5F9', '#64748B')}>不採用済み</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>)
+                    })()}
                   </>
                 )}
               </div>
