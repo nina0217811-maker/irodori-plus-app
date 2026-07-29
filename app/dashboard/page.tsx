@@ -241,7 +241,6 @@ export default function DashboardPage() {
       const acceptedCount = (jobData.applications as any[]).filter((a: any) => a.id === applicationId || a.status === 'accepted').length
       if (acceptedCount >= jobData.required_count) {
         await supabase.from('jobs').update({ status: 'filled' }).eq('id', jobId)
-        await supabase.from('applications').update({ status: 'rejected' }).eq('job_id', jobId).eq('status', 'pending')
         const pendingNurseIds = (jobData.applications as any[]).filter((a: any) => a.status === 'pending' && a.id !== applicationId).map((a: any) => a.nurse_id)
         if (pendingNurseIds.length > 0) {
           await fetch('/api/notify-rejected', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nurseIds: pendingNurseIds, facilityName, jobId }) })
