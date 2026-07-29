@@ -134,7 +134,7 @@ export default function ForFacilityPage() {
             <button onClick={() => window.open('https://www.irodori0305.jp', '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: C.bg, borderRadius: 8, fontSize: 13, color: C.text, border: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
               🌐 公式ホームページ
             </button>
-            <button onClick={() => window.open('https://www.instagram.com/irodori._.plus?igsh=MWh4c2treWRiMndldw%3D%3D&utm_source=qr', '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: C.bg, borderRadius: 8, fontSize: 13, color: C.text, border: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+            <button onClick={() => window.open('https://www.instagram.com/irodori._.plus_nurse?igsh=MWh4c2treWRiMndldw%3D%3D&utm_source=qr', '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: C.bg, borderRadius: 8, fontSize: 13, color: C.text, border: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
               📸 Instagram
             </button>
           </div>
