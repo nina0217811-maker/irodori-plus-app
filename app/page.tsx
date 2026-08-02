@@ -8,19 +8,67 @@ export default function HomePage() {
       <div style={{ background: '#FEF0F0', padding: '32px 20px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
           <div style={{ width: '20px', height: '1px', background: '#E07070' }}></div>
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#E07070', letterSpacing: '0.5px' }}>登録看護師260名以上が待っています</div>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#E07070', letterSpacing: '0.5px' }}>登録看護師260名以上</div>
           <div style={{ width: '20px', height: '1px', background: '#E07070' }}></div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px', gap: '12px', alignItems: 'center', marginBottom: '24px' }}>
           <div>
-            <div style={{ fontSize: '26px', fontWeight: '700', lineHeight: '1.35', letterSpacing: '-0.5px', color: '#1A2235' }}>看護師採用なら<span style={{ color: '#E07070' }}>irodori+</span></div>
-            <div style={{ fontSize: '12px', color: '#64748B', lineHeight: '1.8', marginTop: '10px' }}>単発から正社員まで。沖縄特化・紹介手数料ゼロ。</div>
+            <div style={{ fontSize: '26px', fontWeight: '700', lineHeight: '1.35', letterSpacing: '-0.5px', color: '#1A2235' }}>
+              単発バイトも、<br />正社員転職も。<br /><span style={{ color: '#E07070' }}>irodori+</span>で探そう
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748B', lineHeight: '1.8', marginTop: '10px' }}>沖縄特化・登録無料・紹介手数料ゼロ。</div>
           </div>
           <div style={{ width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', border: '3px solid #fff', boxShadow: '0 2px 12px rgba(224,112,112,0.2)' }}>
             <img src="/nurse1.jpg" alt="看護師" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px', marginBottom: '28px' }}>
+
+        {/* 求人タイプ選択 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
+          <Link href="/jobs" style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#E07070', borderRadius: '12px', padding: '16px 14px', textAlign: 'center', cursor: 'pointer' }}>
+              <div style={{ fontSize: '24px', marginBottom: '6px' }}>🔍</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>単発求人を探す</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', marginTop: '3px' }}>今日から働ける</div>
+            </div>
+          </Link>
+          <Link href="/regular-jobs" style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '16px 14px', textAlign: 'center', cursor: 'pointer', border: '1px solid #EDE0E0' }}>
+              <div style={{ fontSize: '24px', marginBottom: '6px' }}>💼</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A2235' }}>正社員・パートを探す</div>
+              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>転職サポートあり</div>
+            </div>
+          </Link>
+        </div>
+
+        {/* 比較表 */}
+        <div style={{ background: '#fff', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', border: '1px solid #EDE0E0' }}>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748B', marginBottom: '10px' }}>求人タイプの違い</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 1fr', gap: '6px', padding: '6px 0', borderBottom: '0.5px solid #F1F5F9' }}>
+              <div style={{ fontSize: '11px', color: '#94A3B8' }}></div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#E07070', textAlign: 'center' }}>単発</div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#1A2235', textAlign: 'center' }}>正社員・パート</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 1fr', gap: '6px', padding: '8px 0', borderBottom: '0.5px solid #F1F5F9' }}>
+              <div style={{ fontSize: '12px', color: '#64748B' }}>働き方</div>
+              <div style={{ fontSize: '12px', color: '#1A2235', textAlign: 'center' }}>1日〜OK</div>
+              <div style={{ fontSize: '12px', color: '#1A2235', textAlign: 'center' }}>長期安定</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 1fr', gap: '6px', padding: '8px 0', borderBottom: '0.5px solid #F1F5F9' }}>
+              <div style={{ fontSize: '12px', color: '#64748B' }}>給与</div>
+              <div style={{ fontSize: '12px', color: '#1A2235', textAlign: 'center' }}>日給（振込）</div>
+              <div style={{ fontSize: '12px', color: '#1A2235', textAlign: 'center' }}>月給・時給</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 1fr', gap: '6px', padding: '8px 0' }}>
+              <div style={{ fontSize: '12px', color: '#64748B' }}>登録</div>
+              <div style={{ fontSize: '12px', color: '#E07070', fontWeight: '700', textAlign: 'center' }}>無料</div>
+              <div style={{ fontSize: '12px', color: '#E07070', fontWeight: '700', textAlign: 'center' }}>無料</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px', marginBottom: '20px' }}>
           {[
             { label: '紹介手数料', value: '¥0' },
             { label: '登録看護師', value: '260名+' },
@@ -28,171 +76,133 @@ export default function HomePage() {
           ].map(s => (
             <div key={s.label} style={{ background: '#fff', borderRadius: '16px', padding: '16px 10px', textAlign: 'center', border: '1px solid #F0E0E0' }}>
               <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px' }}>{s.label}</div>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: '#E07070' }}>{s.value}</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#E07070' }}>{s.value}</div>
             </div>
           ))}
         </div>
+
+        <Link href="/register" style={{ display: 'block', textDecoration: 'none' }}>
+          <div style={{ background: '#E07070', color: '#fff', textAlign: 'center', padding: '14px', borderRadius: '12px', fontSize: '15px', fontWeight: '700', marginBottom: '10px' }}>
+            👩‍⚕️ 無料で看護師登録する
+          </div>
+        </Link>
+        <div style={{ textAlign: 'center', fontSize: '11px', color: '#94A3B8', marginBottom: '4px' }}>登録は無料・30秒で完了します</div>
+
+        {/* 施設向けリンク */}
+        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '0.5px solid #EDE0E0', textAlign: 'center' }}>
+          <div style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '8px' }}>看護師を採用したい施設の方はこちら</div>
+          <Link href="/for-facility" style={{ textDecoration: 'none' }}>
+            <div style={{ border: '1px solid #EDE0E0', borderRadius: '8px', padding: '10px', fontSize: '13px', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              🏥 施設向けページを見る →
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* 特徴 */}
+      <div style={{ padding: '32px 20px' }}>
+        <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px', textAlign: 'center' }}>irodori+が選ばれる理由</div>
+        <div style={{ fontSize: '13px', color: '#64748B', textAlign: 'center', marginBottom: '24px' }}>現役看護師が運営しているから、現場のことがわかる</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Link href="/register">
-            <button style={{ display: 'block', width: '100%', background: '#E07070', color: '#fff', border: 'none', borderRadius: '32px', padding: '18px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', position: 'relative' }}>
-              <span style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#fff', color: '#E07070', fontSize: '10px', fontWeight: '700', padding: '2px 10px', borderRadius: '20px', border: '1px solid #E07070', whiteSpace: 'nowrap' }}>最短当日から掲載できます</span>
-              無料で施設登録する
-            </button>
-          </Link>
-          <Link href="/contact">
-            <button style={{ display: 'block', width: '100%', background: '#fff', color: '#E07070', border: '2px solid #E07070', borderRadius: '32px', padding: '15px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              資料・料金表を請求する
-            </button>
-          </Link>
-        </div>
-      </div>
-
-      {/* 課題 */}
-      <div style={{ padding: '48px 20px', background: '#fff', borderBottom: '1px solid #F5EDED' }}>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.6' }}>看護師採用でこんなお悩み<br />ありませんか？</div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {[
-            { icon: '😓', text: '採用コストが', em: '高すぎる' },
-            { icon: '😰', text: '採用してもすぐ', em: '辞めてしまう' },
-            { icon: '📋', text: '求人を出しても', em: '応募が来ない' },
-            { icon: '🚨', text: '急な欠員に', em: '対応できない' },
-          ].map(p => (
-            <div key={p.em} style={{ background: '#FEF0F0', borderRadius: '14px', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '24px', flexShrink: 0 }}>{p.icon}</span>
-              <div style={{ fontSize: '13px', fontWeight: '700' }}>{p.text}<span style={{ color: '#E07070' }}>{p.em}</span></div>
-            </div>
-          ))}
-        </div>
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <span style={{ display: 'inline-block', background: '#E07070', color: '#fff', fontSize: '15px', fontWeight: '700', padding: '8px 24px', borderRadius: '4px' }}>irodori+なら解決！</span>
-        </div>
-      </div>
-
-      {/* 解決策 */}
-      <div style={{ background: '#FEF0F0', padding: '48px 20px', borderBottom: '1px solid #F5EDED' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.6' }}>irodori+で解決できること</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginBottom: '20px' }}>
-          {[
-            { icon: '🤝', title: '相性を確かめてから採用', desc: '単発で試してから正社員へ。定着率UP' },
-            { icon: '💰', title: '紹介手数料ゼロ', desc: '月額定額で何名採用しても追加費用なし' },
-            { icon: '📱', title: 'SNSで直接アプローチ', desc: '公式SNSで施設の魅力を発信' },
-            { icon: '🎯', title: 'スカウト機能', desc: '気に入った看護師に直接スカウト' },
-          ].map(s => (
-            <div key={s.title} style={{ background: '#fff', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: '28px', marginBottom: '8px' }}>{s.icon}</div>
-              <div style={{ fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>{s.title}</div>
-              <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.6' }}>{s.desc}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ borderRadius: '16px', overflow: 'hidden', height: '220px', maxWidth: '560px', margin: '0 auto' }}>
-          <img src="/nurse2.jpg" alt="訪問看護" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
-        </div>
-      </div>
-
-      {/* 代表メッセージ */}
-      <div style={{ padding: '48px 20px', background: '#fff', borderBottom: '1px solid #F5EDED' }}>
-        <div style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.6', marginBottom: '20px' }}>現場を知る看護師が、現場のために作りました。</div>
-        <div style={{ borderLeft: '3px solid #E07070', paddingLeft: '16px', marginBottom: '24px' }}>
-          <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '2' }}>「採用したら終わり」の紹介会社では、ミスマッチは防げない。単発で一緒に働いてみて、「この人と働きたい」と思ってから採用する。それだけで、現場が変わります。</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#E07070', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '16px', flexShrink: 0 }}>浜</div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: '700' }}>浜元新菜</div>
-            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>株式会社irodori 代表取締役</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 料金 */}
-      <div style={{ padding: '48px 20px', background: '#FAFAFA', borderBottom: '1px solid #F5EDED' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '700' }}>料金プラン</div>
-          <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '6px' }}>看護師の利用は完全無料</div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          <div style={{ background: '#fff', borderRadius: '14px', padding: '18px 20px', border: '1px solid #F0E0E0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700' }}>ライト</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', color: '#E07070' }}>¥11,000<span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 400 }}>/月</span></div>
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '2' }}>単発求人掲載・LINE通知・チャット管理</div>
-          </div>
-          <div style={{ background: '#FEF0F0', borderRadius: '14px', padding: '18px 20px', border: '2px solid #E07070', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '-11px', left: '16px', background: '#E07070', color: '#fff', fontSize: '10px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px' }}>おすすめ</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#E07070' }}>スタンダード</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', color: '#E07070' }}>¥29,800<span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 400 }}>/月</span></div>
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '2' }}>ライト全機能・正社員パート掲載・スカウト月5件・引き抜きOK</div>
-          </div>
-          <div style={{ background: '#fff', borderRadius: '14px', padding: '18px 20px', border: '1px solid #F0E0E0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700' }}>プレミアム</div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#E07070' }}>初期¥66,000</div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#E07070' }}>+¥39,800/月</div>
+            { emoji: '🔖', title: '紹介手数料0円', desc: '採用が決まっても施設側からの手数料は一切かかりません。看護師の登録・利用も完全無料。' },
+            { emoji: '📍', title: '沖縄特化', desc: '沖縄県内に絞ったマッチングだから、地域に根ざした求人が見つかります。' },
+            { emoji: '💬', title: 'チャットで直接やりとり', desc: '採用確定後はアプリ内チャットで施設と直接連絡。電話不要でスムーズ。' },
+            { emoji: '👩‍⚕️', title: '現役看護師が運営', desc: '看護師の目線で設計されているから、使いやすくて安心。' },
+          ].map(f => (
+            <div key={f.title} style={{ background: '#FBF7F7', borderRadius: '12px', padding: '16px', display: 'flex', gap: '14px', alignItems: 'flex-start', border: '1px solid #F0E0E0' }}>
+              <div style={{ fontSize: '28px', flexShrink: 0 }}>{f.emoji}</div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '4px' }}>{f.title}</div>
+                <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.7' }}>{f.desc}</div>
               </div>
             </div>
-            <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '2' }}>スタンダード全機能・特集ページ・SNS投稿・スカウト無制限</div>
+          ))}
+        </div>
+      </div>
+
+      {/* 使い方 */}
+      <div style={{ background: '#FEF0F0', padding: '32px 20px' }}>
+        <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px', textAlign: 'center' }}>使い方はかんたん</div>
+        <div style={{ fontSize: '13px', color: '#64748B', textAlign: 'center', marginBottom: '24px' }}>登録から応募まで最短5分</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          {[
+            { step: '1', emoji: '📝', title: '無料で会員登録', desc: 'メールアドレスだけで30秒で完了' },
+            { step: '2', emoji: '👤', title: 'プロフィール登録', desc: '資格・エリア・免許証を登録するとスカウトも届く' },
+            { step: '3', emoji: '🔍', title: '求人を探して応募', desc: '単発・正社員どちらも1タップで応募' },
+            { step: '4', emoji: '💬', title: '採用確定→チャットで確認', desc: '施設とチャットして勤務当日へ' },
+          ].map((s, i) => (
+            <div key={s.step} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', padding: '16px 0', borderBottom: i < 3 ? '1px dashed #EDE0E0' : 'none' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E07070', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: '#fff', flexShrink: 0 }}>{s.step}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>{s.emoji}</span>{s.title}
+                </div>
+                <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.7' }}>{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <Link href="/register" style={{ display: 'block', textDecoration: 'none', marginTop: '24px' }}>
+          <div style={{ background: '#E07070', color: '#fff', textAlign: 'center', padding: '14px', borderRadius: '12px', fontSize: '15px', fontWeight: '700' }}>
+            👩‍⚕️ 無料で登録する
           </div>
+        </Link>
+      </div>
+
+      {/* 施設向けセクション */}
+      <div style={{ padding: '32px 20px', background: '#1A2235' }}>
+        <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px', textAlign: 'center', color: '#fff' }}>施設・病院の方へ</div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: '24px' }}>看護師採用をirodori+にお任せください</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+          {[
+            { emoji: '💰', title: '紹介手数料0円', desc: '月額制だから採用人数が増えても追加費用なし' },
+            { emoji: '⚡', title: '最短当日掲載', desc: '登録から求人公開まで最短10分' },
+            { emoji: '📱', title: 'LINE応募通知', desc: '応募が来たらLINEで即通知' },
+          ].map(f => (
+            <div key={f.title} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '14px 16px', display: 'flex', gap: '12px', alignItems: 'flex-start', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '24px', flexShrink: 0 }}>{f.emoji}</div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#fff', marginBottom: '3px' }}>{f.title}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.7' }}>{f.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Link href="/register">
-            <button style={{ display: 'block', width: '100%', background: '#E07070', color: '#fff', border: 'none', borderRadius: '32px', padding: '18px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', position: 'relative' }}>
-              <span style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#fff', color: '#E07070', fontSize: '10px', fontWeight: '700', padding: '2px 10px', borderRadius: '20px', border: '1px solid #E07070', whiteSpace: 'nowrap' }}>最短当日から掲載できます</span>
-              無料で施設登録する
-            </button>
-          </Link>
-          <Link href="/contact">
-            <button style={{ display: 'block', width: '100%', background: '#fff', color: '#E07070', border: '2px solid #E07070', borderRadius: '32px', padding: '15px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              資料・料金表を請求する
-            </button>
-          </Link>
-        </div>
+        <Link href="/for-facility" style={{ display: 'block', textDecoration: 'none' }}>
+          <div style={{ border: '1px solid rgba(255,255,255,0.3)', color: '#fff', textAlign: 'center', padding: '14px', borderRadius: '12px', fontSize: '14px', fontWeight: '600' }}>
+            🏥 施設向けページを見る
+          </div>
+        </Link>
       </div>
 
       {/* FAQ */}
-      <div style={{ padding: '48px 20px', background: '#fff', borderBottom: '1px solid #F5EDED' }}>
-        <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px', textAlign: 'center' }}>よくある質問</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ padding: '32px 20px' }}>
+        <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '24px', textAlign: 'center' }}>よくある質問</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#EDE0E0', borderRadius: '12px', overflow: 'hidden' }}>
           {[
-            { q: '契約期間はありますか？', a: '最低契約期間は3ヶ月です。その後は月単位でいつでも解約できます。' },
-            { q: '採用成功時に追加費用はかかりますか？', a: '一切かかりません。何名採用しても月額定額のみです。' },
-            { q: '請求書払いは可能ですか？', a: 'はい、対応しています。お問い合わせください。' },
-            { q: '沖縄県外でも使えますか？', a: '現在は沖縄県内の施設・看護師を対象としています。' },
-          ].map(faq => (
-            <div key={faq.q} style={{ background: '#FAFAFA', borderRadius: '12px', padding: '16px 18px', border: '1px solid #F0E0E0' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '6px', display: 'flex', gap: '8px' }}><span style={{ color: '#E07070' }}>Q.</span>{faq.q}</div>
-              <div style={{ fontSize: '12px', color: '#64748B', lineHeight: '1.8', paddingLeft: '20px' }}>A. {faq.a}</div>
+            { q: '登録は無料ですか？', a: 'はい、看護師の登録・利用は完全無料です。紹介手数料もかかりません。' },
+            { q: '単発と正社員の両方に応募できますか？', a: 'はい、どちらも同じアカウントで利用できます。単発で試してから正社員を検討することも可能です。' },
+            { q: '沖縄県外の求人はありますか？', a: '現在は沖縄県内の求人のみ対応しています。' },
+            { q: '資格なしでも登録できますか？', a: '看護師免許をお持ちの方が対象です（正看護師・准看護師）。' },
+          ].map((faq, i) => (
+            <div key={i} style={{ background: '#fff', padding: '16px 18px' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '6px', color: '#E07070' }}>Q. {faq.q}</div>
+              <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.7' }}>A. {faq.a}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* 最終CTA */}
-      <div style={{ padding: '56px 20px', background: '#FEF0F0', textAlign: 'center' }}>
-        <div style={{ fontSize: '22px', fontWeight: '700', lineHeight: '1.6', marginBottom: '8px' }}>まずはご相談だけでもOK！</div>
-        <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '32px', lineHeight: '1.8' }}>登録5分・ライトプランから気軽にお試しください。<br />3ヶ月後はいつでも解約できます。</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px', margin: '0 auto' }}>
-          <Link href="/register">
-            <button style={{ display: 'block', width: '100%', background: '#E07070', color: '#fff', border: 'none', borderRadius: '32px', padding: '18px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', position: 'relative' }}>
-              <span style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#fff', color: '#E07070', fontSize: '10px', fontWeight: '700', padding: '2px 10px', borderRadius: '20px', border: '1px solid #E07070', whiteSpace: 'nowrap' }}>最短当日から掲載できます</span>
-              無料で施設登録する
-            </button>
-          </Link>
-          <Link href="/contact">
-            <button style={{ display: 'block', width: '100%', background: '#fff', color: '#E07070', border: '2px solid #E07070', borderRadius: '32px', padding: '15px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              資料・料金表を請求する
-            </button>
-          </Link>
-        </div>
-        <div style={{ marginTop: '24px', fontSize: '11px', color: '#94A3B8' }}>info@irodori0305.jp</div>
+      <div style={{ background: '#E07070', padding: '32px 20px', textAlign: 'center' }}>
+        <div style={{ fontSize: '20px', fontWeight: '700', color: '#fff', marginBottom: '8px' }}>さあ、はじめよう</div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', marginBottom: '20px', lineHeight: '1.7' }}>登録は無料・30秒で完了します</div>
+        <Link href="/register" style={{ display: 'block', textDecoration: 'none' }}>
+          <div style={{ background: '#fff', color: '#E07070', textAlign: 'center', padding: '14px', borderRadius: '12px', fontSize: '15px', fontWeight: '700' }}>
+            👩‍⚕️ 無料で看護師登録する
+          </div>
+        </Link>
       </div>
 
     </div>
