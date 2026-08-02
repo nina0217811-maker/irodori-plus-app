@@ -344,7 +344,7 @@ function MyPageContent() {
         </div>
 
         {/* メインコンテンツ+サイドバー */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, alignItems: 'start' }}>
 
           {/* 左: メインコンテンツ */}
           <div>
