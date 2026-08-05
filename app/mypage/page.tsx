@@ -70,7 +70,7 @@ function MyPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mainTab, setMainTab] = useState<'apps' | 'calendar' | 'favs' | 'scouts'>('apps')
-  const [settingView, setSettingView] = useState<null | 'profile' | 'pref' | 'tax'>( null)
+  const [settingView, setSettingView] = useState<null | 'profile' | 'pref' | 'tax' | 'email'>( null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
@@ -231,6 +231,7 @@ function MyPageContent() {
           <button onClick={() => setSettingView(null)} style={{ background: 'none', border: 'none', color: C.sub, fontSize: 13, cursor: 'pointer', marginBottom: 20, padding: 0 }}>← マイページに戻る</button>
           {settingView === 'profile' && <ProfileForm userId={userId} initial={profile} initialBank={bankAccount} onSaved={(p, b) => { setProfile(p); if (b) setBankAccount(b); setSettingView(null) }} />}
           {settingView === 'pref' && <PreferenceForm userId={userId} />}
+          {settingView === 'email' && <EmailChangeForm />}
           {settingView === 'tax' && (
             <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 28, textAlign: 'center' }}>
               <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>確定申告・収入管理</div>
@@ -500,6 +501,7 @@ function MyPageContent() {
               <div style={{ padding: '6px 0' }}>
                 {[
                   { icon: '👤', label: 'プロフィール編集', key: 'profile' as const },
+                  { icon: '✉️', label: 'メールアドレス変更', key: 'email' as const },
                   { icon: '🎯', label: '希望条件', key: 'pref' as const },
                   { icon: '📊', label: '確定申告・収入管理', key: 'tax' as const },
                 ].map(item => (
@@ -730,5 +732,47 @@ export default function MyPage() {
     <Suspense fallback={<div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}>読み込み中...</div>}>
       <MyPageContent />
     </Suspense>
+  )
+}
+
+function EmailChangeForm() {
+  const [email, setEmail] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
+
+  const save = async () => {
+    if (!email) return
+    setSaving(true)
+    setError('')
+    const { error } = await supabase.auth.updateUser({ email })
+    if (error) { setError(error.message); setSaving(false); return }
+    setSaving(false)
+    setDone(true)
+  }
+
+  const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1.5px solid #EDE0E0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', background: '#fff', fontFamily: 'inherit' }
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE0E0', padding: '24px 28px' }}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>メールアドレス変更</h2>
+      <p style={{ fontSize: 13, color: '#64748B', marginBottom: 20, lineHeight: 1.7 }}>新しいメールアドレスを入力してください。確認メールが届きます。</p>
+      {done ? (
+        <div style={{ background: '#D1FAE5', color: '#065F46', padding: '14px', borderRadius: 8, fontSize: 14, lineHeight: 1.7 }}>
+          確認メールを送信しました！<br />新しいメールアドレスのリンクをクリックして変更を完了してください。
+        </div>
+      ) : (
+        <>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>新しいメールアドレス</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inp} placeholder="new@example.com" />
+          </div>
+          {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}
+          <button onClick={save} disabled={saving || !email} style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: saving || !email ? '#ccc' : '#E07070', color: '#fff', fontWeight: 700, fontSize: 15, cursor: saving || !email ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            {saving ? '送信中...' : '確認メールを送る'}
+          </button>
+        </>
+      )}
+    </div>
   )
 }
