@@ -114,6 +114,7 @@ export default function DashboardPage() {
   const [cancelDetail, setCancelDetail] = useState('')
   const [canceling, setCanceling] = useState(false)
   const [justAccepted, setJustAccepted] = useState<string | null>(null)
+  const [showPastJobs, setShowPastJobs] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -278,6 +279,7 @@ export default function DashboardPage() {
 
   const totalApplicants = jobs.reduce((sum, j) => sum + (j.applications?.length || 0), 0)
   const openJobs = jobs.filter(j => j.status === 'open')
+  const pastJobs = jobs.filter(j => j.status === 'filled' || j.status === 'closed')
   const acceptedTotal = jobs.reduce((sum, j) => sum + (j.applications?.filter(a => a.status === 'accepted').length || 0), 0)
 
   const modalBase: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }
@@ -792,6 +794,38 @@ export default function DashboardPage() {
 
       {/* ===== 常勤・パート ===== */}
       <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* 過去の求人折りたたみ */}
+        {pastJobs.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <button
+              onClick={() => setShowPastJobs(v => !v)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F1F5F9', border: '0.5px solid #EDE0E0', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', marginBottom: showPastJobs ? '10px' : '0' }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>過去の求人（{pastJobs.length}件）</span>
+              <span style={{ fontSize: '12px', color: '#94A3B8' }}>{showPastJobs ? '▲ 閉じる' : '▼ 表示する'}</span>
+            </button>
+            {showPastJobs && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pastJobs.map(job => (
+                  <div key={job.id} style={{ background: '#F8FAFC', borderRadius: '10px', padding: '14px 18px', border: '0.5px solid #CBD5E1', opacity: 0.75 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' as const }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>{job.work_date}　{job.time_from}〜{job.time_to}</div>
+                        <div style={{ fontSize: '12px', color: '#94A3B8' }}>{job.wage_type === 'hourly' ? '時給' : '日給'} ¥{job.wage_amount?.toLocaleString()} · {job.facility_type}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: job.status === 'filled' ? '#EDE9FB' : '#F1F5F9', color: job.status === 'filled' ? '#3C3489' : '#64748B', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>{job.status === 'filled' ? '満員' : '終了'}</span>
+                        <span style={{ fontSize: '12px', color: '#94A3B8' }}>応募 {job.applications?.length || 0}名</span>
+                        <button onClick={() => handleDeleteJob(job.id)} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid #FCA5A5', background: 'none', color: '#DC2626', cursor: 'pointer', fontFamily: 'inherit' }}>削除</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         常勤・パート求人
         {isRegularLocked && <span style={{ background: '#F1F5F9', color: '#94A3B8', fontSize: '11px', padding: '2px 8px', borderRadius: '99px', fontWeight: '400' }}>スタンダード以上</span>}
       </div>
