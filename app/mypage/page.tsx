@@ -394,6 +394,9 @@ function MyPageContent() {
                                 <button onClick={() => openGoogleCalendar(app)} style={btn('#EFF6FF', '#1D4ED8', '#BFDBFE')}>Googleカレンダー</button>
                               </div>
                             )}
+                            {app.status === 'pending' && (app as any).hire_flow === 'interview' && (
+                              <Link href={`/chat/${app.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#3C3489', fontWeight: 600, textDecoration: 'none', background: '#EDE9FB', padding: '4px 10px', borderRadius: 99 }}>💬 面談チャットを開く →</Link>
+                            )}
                             {(app.status === 'pending' || app.status === 'accepted') && (
                               <button onClick={() => cancelApplication(app)} disabled={cancelling === app.id} style={btn('#fff', '#ef4444', '#FCA5A5')}>
                                 {cancelling === app.id ? 'キャンセル中...' : 'キャンセル'}
