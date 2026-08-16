@@ -14,6 +14,7 @@ type Job = {
   facility_type: string
   required_license: string
   description: string
+  hire_flow?: string
   address: string | null
   items_to_bring: string | null
   dress_code: string | null
@@ -78,7 +79,7 @@ export default function JobDetailPage() {
   }
 
   const fetchJob = async () => {
-    const { data, error } = await supabase.from('jobs').select(`*, facilities (id, facility_name, address)`).eq('id', id).single()
+    const { data, error } = await supabase.from('jobs').select(`*, facilities (id, facility_name, address), hire_flow`).eq('id', id).single()
     if (!error && data) setJob(data)
     setLoading(false)
   }
@@ -302,6 +303,24 @@ export default function JobDetailPage() {
 
         {/* 業務内容 */}
         <div style={{ background: '#FFFFFF', border: `0.5px solid ${C.primaryBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
+          {job.hire_flow === 'interview' && (
+            <div style={{ background: '#EDE9FB', border: '0.5px solid #7F77DD', borderRadius: '10px', padding: '12px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '18px' }}>💬</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#26215C', marginBottom: '3px' }}>面談型の求人です</div>
+                <div style={{ fontSize: '12px', color: '#3C3489', lineHeight: '1.7' }}>応募後、施設とチャットで面談日程を調整してから採用が確定します</div>
+              </div>
+            </div>
+          )}
+          {(!job.hire_flow || job.hire_flow === 'direct') && (
+            <div style={{ background: '#FDF0F0', border: '0.5px solid #E07070', borderRadius: '10px', padding: '12px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '18px' }}>⚡</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#7A2A1C', marginBottom: '3px' }}>即採用型の求人です</div>
+                <div style={{ fontSize: '12px', color: '#9A4A36', lineHeight: '1.7' }}>施設が採用確定後、チャットで勤務詳細を確認できます</div>
+              </div>
+            </div>
+          )}
           <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '10px' }}>業務内容</div>
           <p style={{ fontSize: '14px', lineHeight: '1.8', color: C.textSub, margin: 0 }}>{job.description}</p>
           {[
