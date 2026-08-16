@@ -18,6 +18,7 @@ type FormState = {
   parking: string
   lunch: string
   is_urgent: boolean
+  hire_flow: string
   tags: string
   required_count: number
   address: string
