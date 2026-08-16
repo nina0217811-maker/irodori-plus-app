@@ -22,6 +22,7 @@ type Job = {
   is_urgent: boolean
   required_count: number
   applications: Application[]
+  hire_flow?: string
 }
 
 type RegularJob = {
@@ -209,7 +210,7 @@ export default function DashboardPage() {
       }
     }
 
-    const { data: jobData } = await supabase.from('jobs').select('*, applications (id, nurse_id, status)').eq('facility_id', userData.user.id)
+    const { data: jobData } = await supabase.from('jobs').select('*, applications (id, nurse_id, status), hire_flow').eq('facility_id', userData.user.id)
     if (jobData) {
       setJobs(jobData)
       const nurseIds = [...new Set(jobData.flatMap((j: any) => j.applications.map((a: any) => a.nurse_id)))]
@@ -754,7 +755,10 @@ export default function DashboardPage() {
                                     {hasAccepted ? (
                                       <span style={S.badge('#F1F5F9', '#64748B')}>不採用済み</span>
                                     ) : (
-                                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' as const }}>
+                                        {job.hire_flow === 'interview' && (
+                                          <button onClick={() => router.push(`/chat/${app.id}`)} style={S.btn('#EDE9FB', '#7F77DD', '#26215C')}>💬 チャット</button>
+                                        )}
                                         <button onClick={() => acceptNurse(app.id, app.nurse_id, job.id)} style={S.btn('#E07070', '#C45A5A', '#fff')}>採用</button>
                                         <button onClick={() => { setRejectModal({ applicationId: app.id, nurseId: app.nurse_id, nurseName, jobId: job.id }); setRejectReason('') }} style={S.btn('#fff', '#FCA5A5', '#991B1B')}>不採用</button>
                                       </div>
