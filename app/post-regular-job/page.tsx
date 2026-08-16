@@ -78,6 +78,7 @@ function PostRegularJobForm() {
             location: job.location ?? '',
             description: job.description ?? '',
             required_license: job.required_license ?? 'rn',
+            hire_flow: job.hire_flow ?? 'interview',
             insurance: job.insurance ?? '',
             transportation: job.transportation ?? '',
             holidays: job.holidays ?? '',
