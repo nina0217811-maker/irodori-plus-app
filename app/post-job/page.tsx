@@ -40,6 +40,7 @@ export default function PostJobPage() {
     wage_amount: '',
     facility_type: '',
     required_license: 'rn',
+    hire_flow: 'direct',
     description: '',
     items_to_bring: '',
     dress_code: '',
@@ -119,6 +120,7 @@ export default function PostJobPage() {
       wage_amount: parseInt(form.wage_amount),
       facility_type: form.facility_type,
       required_license: form.required_license,
+      hire_flow: form.hire_flow,
       description: form.description,
       items_to_bring: form.items_to_bring || null,
       dress_code: form.dress_code || null,
@@ -349,6 +351,21 @@ export default function PostJobPage() {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>採用フロー *</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+            {[
+              { value: 'direct', label: '⚡ 即採用型', desc: '応募 → 採用/不採用 → チャット開放（単発バイトにおすすめ）' },
+              { value: 'interview', label: '💬 面談型', desc: '応募 → チャット開放 → 面談 → 採用確定（正社員・パートにおすすめ）' },
+            ].map(option => (
+              <label key={option.value} style={{ display: 'flex', gap: '12px', padding: '12px 14px', borderRadius: '10px', border: `1.5px solid ${form.hire_flow === option.value ? '#E07070' : '#EDE0E0'}`, background: form.hire_flow === option.value ? '#FDF0F0' : '#fff', cursor: 'pointer' }}>
+                <input type="radio" name="hire_flow" value={option.value} checked={form.hire_flow === option.value} onChange={() => set('hire_flow', option.value)} style={{ marginTop: '3px', accentColor: '#E07070' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A2235', marginBottom: '2px' }}>{option.label}</div>
+                  <div style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.6' }}>{option.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
           <label style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', display: 'block', marginBottom: '6px' }}>必要資格 *</label>
           <select required value={form.required_license} onChange={e => set('required_license', e.target.value)} style={{ ...inp, background: '#fff' }}>
             <option value='rn'>正看護師</option>

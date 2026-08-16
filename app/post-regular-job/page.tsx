@@ -22,6 +22,7 @@ function PostRegularJobForm() {
     location: '',
     description: '',
     required_license: 'rn',
+    hire_flow: 'interview',
     insurance: '',
     transportation: '',
     holidays: '',
@@ -109,6 +110,7 @@ function PostRegularJobForm() {
       location: form.location,
       description: form.description,
       required_license: form.required_license,
+      hire_flow: (form as any).hire_flow ?? 'interview',
       insurance: form.insurance || null,
       transportation: form.transportation || null,
       holidays: form.holidays || null,
@@ -230,6 +232,23 @@ function PostRegularJobForm() {
           <input required value={form.work_days} onChange={e => set('work_days', e.target.value)} style={inp} placeholder='例：月〜金（土日祝休み）' />
         </div>
 
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>採用フロー *</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { value: 'direct', label: '⚡ 即採用型', desc: '応募 → 採用/不採用 → チャット開放' },
+              { value: 'interview', label: '💬 面談型', desc: '応募 → チャット開放 → 面談 → 採用確定（正社員におすすめ）' },
+            ].map(option => (
+              <label key={option.value} style={{ display: 'flex', gap: 12, padding: '12px 14px', borderRadius: 10, border: `1.5px solid ${(form as any).hire_flow === option.value ? '#E07070' : '#EDE0E0'}`, background: (form as any).hire_flow === option.value ? '#FDF0F0' : '#fff', cursor: 'pointer' }}>
+                <input type="radio" name="hire_flow" value={option.value} checked={(form as any).hire_flow === option.value} onChange={() => set('hire_flow', option.value)} style={{ marginTop: 3, accentColor: '#E07070' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1A2235', marginBottom: 2 }}>{option.label}</div>
+                  <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.6 }}>{option.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>必要資格 *</label>
           <select required value={form.required_license} onChange={e => set('required_license', e.target.value)} style={inp}>
