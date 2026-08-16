@@ -30,6 +30,7 @@ type Application = {
   created_at: string
   job_id: string
   job_work_date: string
+  hire_flow?: string
   job_time_from: string
   job_time_to: string
   job_wage: number
@@ -116,7 +117,7 @@ function MyPageContent() {
 
       if (apps && apps.length > 0) {
         const jobIds = apps.map((a: any) => a.job_id)
-        const { data: jobs } = await supabase.from('jobs').select('id, work_date, time_from, time_to, wage_amount, facility_id').in('id', jobIds)
+        const { data: jobs } = await supabase.from('jobs').select('id, work_date, time_from, time_to, wage_amount, facility_id, hire_flow').in('id', jobIds)
         const facilityIds = [...new Set((jobs ?? []).map((j: any) => j.facility_id))]
         const { data: facilities } = await supabase.from('facilities').select('id, facility_name, facility_type').in('id', facilityIds)
         setApplications(apps.map((app: any) => {
@@ -125,6 +126,7 @@ function MyPageContent() {
           return {
             id: app.id, status: app.status, created_at: app.applied_at, job_id: app.job_id,
             job_work_date: job?.work_date ?? '', job_time_from: job?.time_from ?? '',
+            hire_flow: (job as any)?.hire_flow ?? 'direct',
             job_time_to: job?.time_to ?? '', job_wage: job?.wage_amount ?? 0,
             facility_name: fac?.facility_name ?? '—', facility_type: fac?.facility_type ?? '',
           }
@@ -377,6 +379,11 @@ function MyPageContent() {
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{app.facility_name}</div>
                             <div style={{ fontSize: 12, color: C.sub }}>{app.job_work_date} · {app.job_time_from}〜{app.job_time_to}</div>
+                    {(app as any).hire_flow === 'interview' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#3C3489', background: '#EDE9FB', padding: '2px 8px', borderRadius: 99, marginTop: 4 }}>💬 面談型</span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9A4A36', background: '#FDF0F0', padding: '2px 8px', borderRadius: 99, marginTop: 4 }}>⚡ 即採用型</span>
+                    )}
                             {app.job_wage > 0 && <div style={{ fontSize: 14, fontWeight: 600, color: C.primary, marginTop: 4 }}>¥{app.job_wage.toLocaleString()}</div>}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
