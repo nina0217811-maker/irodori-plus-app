@@ -1,7 +1,42 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { createClient } from '@supabase/supabase-js'
 
-export default function HomePage() {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default async function HomePage() {
+  // 新着単発求人（最新4件）
+  const { data: jobs } = await supabase
+    .from('jobs')
+    .select('id, work_date, time_from, time_to, wage_amount, wage_type, facility_type, facility_id, is_urgent, hire_flow, address')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(4)
+
+  // 新着正社員・パート（最新2件）
+  const { data: regularJobs } = await supabase
+    .from('regular_jobs')
+    .select('id, title, employment_type, salary_amount, salary_type, location, facility_id, hire_flow')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(2)
+
+  // 施設名取得
+  const facilityIds = [...new Set([
+    ...(jobs ?? []).map((j: any) => j.facility_id),
+    ...(regularJobs ?? []).map((j: any) => j.facility_id),
+  ].filter(Boolean))]
+
+  const { data: facilities } = facilityIds.length > 0
+    ? await supabase.from('facilities').select('id, facility_name').in('id', facilityIds)
+    : { data: [] }
+
+  const facilityMap: Record<string, string> = {}
+  facilities?.forEach((f: any) => { facilityMap[f.id] = f.facility_name })
+
   return (
     <div style={{ fontFamily: "'Noto Sans JP', sans-serif", color: '#1A2235', background: '#FAFAFA' }}>
 
@@ -124,44 +159,32 @@ export default function HomePage() {
 
         {/* 求人カード */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Link href="/jobs" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #EDE0E0' }}>
-              <div style={{ height: 6, background: 'linear-gradient(90deg, #0096A0, #E07070)' }} />
-              <div style={{ padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 3 }}>訪問看護ステーションはな</div>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>訪問看護スタッフ（単発バイト）</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                  <span style={{ background: '#FEE2E2', color: '#991B1B', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>急募</span>
-                  <span style={{ background: '#E0F7FA', color: '#0096A0', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>📍 那覇市</span>
-                </div>
-                <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>📅 2026-08-25　⏰ 09:00〜17:00</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥20,000 <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 400 }}>日給</span></span>
-                  <span style={{ background: '#E07070', color: '#fff', borderRadius: 99, padding: '6px 16px', fontSize: 12, fontWeight: 600 }}>応募する</span>
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/regular-jobs" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #EDE0E0' }}>
-              <div style={{ height: 6, background: 'linear-gradient(90deg, #0096A0, #1A2235)' }} />
-              <div style={{ padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 3 }}>有限会社フィーチャー</div>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>クリニック 正看護師（正社員）</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                  <span style={{ background: '#DBEAFE', color: '#1E40AF', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>NEW</span>
-                  <span style={{ background: '#EDE9FB', color: '#3C3489', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>💬 面談型</span>
-                  <span style={{ background: '#E0F7FA', color: '#0096A0', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>📍 宜野湾市</span>
-                </div>
-                <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>💼 正社員　🌱 未経験OK　🚗 駐車場あり</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: '#0096A0' }}>¥280,000 <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 400 }}>月給〜</span></span>
-                  <span style={{ background: '#0096A0', color: '#fff', borderRadius: 99, padding: '6px 16px', fontSize: 12, fontWeight: 600 }}>応募する</span>
+          {(jobs ?? []).map((job: any) => (
+            <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #EDE0E0' }}>
+                <div style={{ height: 6, background: 'linear-gradient(90deg, #0096A0, #E07070)' }} />
+                <div style={{ padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 3 }}>{facilityMap[job.facility_id] ?? '施設'}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{job.facility_type ?? '看護師'} 単発バイト</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {job.is_urgent && <span style={{ background: '#FEE2E2', color: '#991B1B', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>急募</span>}
+                    {job.hire_flow === 'interview' && <span style={{ background: '#EDE9FB', color: '#3C3489', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>💬 面談型</span>}
+                    {job.address && <span style={{ background: '#E0F7FA', color: '#0096A0', fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>📍 {job.address}</span>}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>📅 {job.work_date}　⏰ {job.time_from}〜{job.time_to}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥{job.wage_amount?.toLocaleString()} <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 400 }}>{job.wage_type === 'hourly' ? '時給' : '日給'}</span></span>
+                    <span style={{ background: '#E07070', color: '#fff', borderRadius: 99, padding: '6px 16px', fontSize: 12, fontWeight: 600 }}>応募する</span>
+                  </div>
                 </div>
               </div>
+            </Link>
+          ))}
+          {(jobs ?? []).length === 0 && (
+            <div style={{ textAlign: 'center', padding: '32px', color: '#94A3B8', fontSize: 13 }}>
+              現在募集中の単発求人はありません
             </div>
-          </Link>
+          )}
         </div>
       </div>
 
