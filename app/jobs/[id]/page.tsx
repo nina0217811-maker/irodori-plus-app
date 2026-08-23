@@ -79,7 +79,7 @@ export default function JobDetailPage() {
   }
 
   const fetchJob = async () => {
-    const { data, error } = await supabase.from('jobs').select(`*, facilities (id, facility_name, address), hire_flow`).eq('id', id).single()
+    const { data, error } = await supabase.from('jobs').select(`*, facilities (id, facility_name, address, phone, description, features, staff_count, established_year, instagram_url), hire_flow`).eq('id', id).single()
     if (!error && data) setJob(data)
     setLoading(false)
   }
@@ -335,6 +335,44 @@ export default function JobDetailPage() {
             </div>
           ))}
         </div>
+
+        {/* 施設情報 */}
+        {(job.facilities?.description || (job.facilities as any)?.features?.length > 0) && (
+          <div style={{ background: '#FFFFFF', border: `0.5px solid ${C.primaryBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🏥 この施設について
+            </div>
+            {job.facilities?.description && (
+              <p style={{ fontSize: '13px', color: C.textSub, lineHeight: '1.8', marginBottom: '12px' }}>{job.facilities.description}</p>
+            )}
+            {(job.facilities as any)?.features?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                {(job.facilities as any).features.map((f: string) => (
+                  <span key={f} style={{ background: '#FDF0F0', color: '#E07070', padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500' }}>{f}</span>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {(job.facilities as any)?.staff_count && (
+                <div style={{ background: '#FBF7F7', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ fontSize: '10px', color: '#94A3B8', marginBottom: '2px' }}>職員数</div>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>{(job.facilities as any).staff_count}</div>
+                </div>
+              )}
+              {(job.facilities as any)?.established_year && (
+                <div style={{ background: '#FBF7F7', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ fontSize: '10px', color: '#94A3B8', marginBottom: '2px' }}>設立年</div>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>{(job.facilities as any).established_year}</div>
+                </div>
+              )}
+            </div>
+            {(job.facilities as any)?.instagram_url && (
+              <button onClick={() => window.open((job.facilities as any).instagram_url, '_blank')} style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#64748B', cursor: 'pointer', fontFamily: 'inherit' }}>
+                📸 Instagramを見る
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 応募エリア */}
         <div style={{ marginBottom: '14px' }}>
