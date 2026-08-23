@@ -645,6 +645,7 @@ export default function DashboardPage() {
               ＋ 常勤・パート
             </button>
           )}
+          <button onClick={() => router.push('/dashboard/profile')} style={{ padding: '8px 16px', background: '#fff', color: '#0096A0', border: '1px solid #0096A0', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>🏥 施設プロフィール</button>
           <button onClick={() => router.push('/post-job')} style={{ padding: '8px 16px', background: '#E07070', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>＋ 単発求人を投稿</button>
           {userId === '2f22fea3-4f1f-4fac-9053-1f8d4b14f523' && (
             <button onClick={() => router.push('/admin/dashboard')} style={{ padding: '8px 16px', background: '#1A2235', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>管理画面</button>
