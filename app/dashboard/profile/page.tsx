@@ -19,6 +19,8 @@ export default function FacilityProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [userId, setUserId] = useState('')
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
   const [form, setForm] = useState({
     facility_name: '',
     facility_type: '',
@@ -39,7 +41,7 @@ export default function FacilityProfilePage() {
 
       const { data } = await supabase
         .from('facilities')
-        .select('facility_name, facility_type, address, phone, description, features, staff_count, established_year, instagram_url')
+        .select('facility_name, facility_type, address, phone, description, features, staff_count, established_year, instagram_url, photos')
         .eq('id', user.id)
         .single()
 
@@ -55,6 +57,7 @@ export default function FacilityProfilePage() {
           established_year: data.established_year ?? '',
           instagram_url: data.instagram_url ?? '',
         })
+        setPhotos(data.photos ?? [])
       }
       setLoading(false)
     }
@@ -70,6 +73,28 @@ export default function FacilityProfilePage() {
     }))
   }
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    setUploading(true)
+    const newPhotos: string[] = []
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop()
+      const path = `${userId}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('facility-photos').upload(path, file)
+      if (!error) {
+        const { data } = supabase.storage.from('facility-photos').getPublicUrl(path)
+        newPhotos.push(data.publicUrl)
+      }
+    }
+    setPhotos(prev => [...prev, ...newPhotos])
+    setUploading(false)
+  }
+
+  const handleDeletePhoto = (url: string) => {
+    setPhotos(prev => prev.filter(p => p !== url))
+  }
+
   const handleSave = async () => {
     setSaving(true)
     await supabase.from('facilities').update({
@@ -82,6 +107,7 @@ export default function FacilityProfilePage() {
       staff_count: form.staff_count,
       established_year: form.established_year,
       instagram_url: form.instagram_url,
+      photos: photos,
     }).eq('id', userId)
     setSaving(false)
     setSaved(true)
@@ -216,6 +242,32 @@ export default function FacilityProfilePage() {
                 <input value={form.instagram_url} onChange={e => setForm(p => ({ ...p, instagram_url: e.target.value }))} style={{ ...inp, border: 'none', borderRadius: 0 }} placeholder="https://instagram.com/..." />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* 写真 */}
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', marginBottom: 20, border: '0.5px solid #EDE0E0' }}>
+          <div style={{ background: 'linear-gradient(135deg, #FEF9C3, #FEF3C7)', padding: '12px 16px', borderBottom: '0.5px solid #EDE0E0', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>📸</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>施設の写真</span>
+          </div>
+          <div style={{ padding: 16 }}>
+            {photos.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
+                {photos.map((url, i) => (
+                  <div key={i} style={{ position: 'relative' }}>
+                    <img src={url} alt={`施設写真${i+1}`} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8 }} />
+                    <button onClick={() => handleDeletePhoto(url)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label style={{ display: 'block', border: '2px dashed #EDE0E0', borderRadius: 10, padding: '20px', textAlign: 'center', cursor: 'pointer' }}>
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
+              <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#1A2235', marginBottom: 2 }}>{uploading ? 'アップロード中...' : '写真をアップロード'}</div>
+              <div style={{ fontSize: 11, color: '#94A3B8' }}>複数選択可。施設の外観・内観・スタッフ写真など</div>
+            </label>
           </div>
         </div>
 
