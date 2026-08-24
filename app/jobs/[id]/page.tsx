@@ -27,6 +27,12 @@ type Job = {
     id: string
     facility_name: string
     address: string
+    phone?: string
+    description?: string
+    features?: string[]
+    staff_count?: string
+    established_year?: string
+    instagram_url?: string
   }
 }
 
