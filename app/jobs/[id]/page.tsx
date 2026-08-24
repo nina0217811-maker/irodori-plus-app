@@ -372,6 +372,13 @@ export default function JobDetailPage() {
                 </div>
               )}
             </div>
+            {(job.facilities as any)?.photos?.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginTop: '10px' }}>
+                {(job.facilities as any).photos.slice(0, 6).map((url: string, i: number) => (
+                  <img key={i} src={url} alt={`施設写真${i+1}`} style={{ width: '100%', height: 70, objectFit: 'cover', borderRadius: 8 }} />
+                ))}
+              </div>
+            )}
             {(job.facilities as any)?.instagram_url && (
               <button onClick={() => window.open((job.facilities as any).instagram_url, '_blank')} style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#64748B', cursor: 'pointer', fontFamily: 'inherit' }}>
                 📸 Instagramを見る
