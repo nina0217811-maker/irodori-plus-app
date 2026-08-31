@@ -9,6 +9,7 @@ const PLANS: Record<string, { price: string; mode: 'subscription' | 'payment'; l
   campaign: {
     price: 'price_1TSeEmHSLOWxbHz4fHVfdUHh',
     mode: 'subscription',
+    label: 'キャンペーンプラン ¥11,000/月',
   },
   ume: {
     price: 'price_1TSeEmHSLOWxbHz4fHVfdUHh',
