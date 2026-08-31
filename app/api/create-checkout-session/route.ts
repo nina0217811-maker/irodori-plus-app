@@ -6,6 +6,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 const PLANS: Record<string, { price: string; mode: 'subscription' | 'payment'; label: string }> = {
+  campaign: {
+    price: 'price_1TSeEmHSLOWxbHz4fHVfdUHh',
+    label: 'キャンペーンプラン',
+    plan: 'ume',
+  },
   ume: {
     price: 'price_1TSeEmHSLOWxbHz4fHVfdUHh',
     mode: 'subscription',

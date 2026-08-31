@@ -577,6 +577,18 @@ export default function DashboardPage() {
             </div>
             <p style={{ fontSize: 12, color: '#64748B', marginBottom: 20 }}>大手求人サイトは2週間で¥90,000〜。irodori+は月額で使い放題です。</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* キャンペーンプラン */}
+              <div style={{ background: 'linear-gradient(135deg, #FDF0F0, #FEF9C3)', border: '2px solid #E07070', borderRadius: 12, padding: '20px', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: -11, left: 16, background: 'linear-gradient(135deg, #E07070, #C45A5A)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 20 }}>🎉 期間限定キャンペーン</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div><div style={{ fontSize: 15, fontWeight: 700, color: '#E07070' }}>キャンペーンプラン</div></div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#E07070' }}>¥11,000<span style={{ fontSize: 12, color: '#64748B', fontWeight: 400 }}>/月</span></div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.8, marginBottom: 14 }}>単発求人・正社員パート掲載・看護師への即時LINE通知・チャット・スカウト機能・支払い明細管理</div>
+                <button onClick={() => { setShowPlanModal(false); handleSubscribe('campaign') }} style={{ width: '100%', padding: '10px', background: '#E07070', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>キャンペーンプランで始める</button>
+              </div>
               <div style={{ background: '#fff', border: '1px solid #EDE0E0', borderRadius: 12, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div><span style={{ background: '#FBF7F7', color: '#94A3B8', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginBottom: 6, display: 'inline-block' }}>ライト</span><div style={{ fontSize: 15, fontWeight: 700 }}>単発求人プラン</div></div>
