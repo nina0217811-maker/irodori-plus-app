@@ -14,6 +14,7 @@ type Feature = {
   created_at: string
   facilities?: { facility_name: string; facility_type: string }
   facility_id: string
+  video_url?: string
 }
 
 const C = { primary: '#E07070', dark: '#C45A5A', light: '#FDF0F0', bg: '#FBF7F7', card: '#FFFFFF', border: '#EDE0E0', sub: '#64748B' }
@@ -63,6 +64,13 @@ export default function FeaturesPage() {
                 <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', cursor: 'pointer' }}>
                   {f.image_url ? (
                     <img src={f.image_url} alt={f.title} style={{ width: '100%', height: 180, objectFit: 'cover' }} />
+                  ) : f.video_url ? (
+                    <div onClick={e => { e.preventDefault(); window.open(f.video_url, '_blank') }} style={{ width: '100%', height: 180, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, cursor: 'pointer', position: 'relative' }}>
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 22, marginLeft: 3, color: '#fff' }}>▶</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Instagramで動画を見る</div>
+                    </div>
                   ) : (
                     <div style={{ width: '100%', height: 180, background: 'linear-gradient(135deg, #E07070, #C0727A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🏥</div>
                   )}
