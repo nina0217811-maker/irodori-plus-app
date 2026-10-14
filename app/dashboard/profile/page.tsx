@@ -31,6 +31,7 @@ export default function FacilityProfilePage() {
     staff_count: '',
     established_year: '',
     instagram_url: '',
+    video_url: '',
   })
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function FacilityProfilePage() {
 
       const { data } = await supabase
         .from('facilities')
-        .select('facility_name, facility_type, address, phone, description, features, staff_count, established_year, instagram_url, photos')
+        .select('facility_name, facility_type, address, phone, description, features, staff_count, established_year, instagram_url, photos, video_url')
         .eq('id', user.id)
         .single()
 
@@ -56,6 +57,7 @@ export default function FacilityProfilePage() {
           staff_count: data.staff_count ?? '',
           established_year: data.established_year ?? '',
           instagram_url: data.instagram_url ?? '',
+          video_url: (data as any).video_url ?? '',
         })
         setPhotos(data.photos ?? [])
       }
@@ -107,6 +109,7 @@ export default function FacilityProfilePage() {
       staff_count: form.staff_count,
       established_year: form.established_year,
       instagram_url: form.instagram_url,
+      video_url: (form as any).video_url ?? '',
       photos: photos,
     }).eq('id', userId)
     setSaving(false)
@@ -240,6 +243,15 @@ export default function FacilityProfilePage() {
               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #EDE0E0', borderRadius: 8, overflow: 'hidden' }}>
                 <span style={{ padding: '10px 12px', background: '#F1F5F9', fontSize: 16, borderRight: '1px solid #EDE0E0' }}>📸</span>
                 <input value={form.instagram_url} onChange={e => setForm(p => ({ ...p, instagram_url: e.target.value }))} style={{ ...inp, border: 'none', borderRadius: 0 }} placeholder="https://instagram.com/..." />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 5 }}>施設特集動画URL（Instagram投稿URL）</label>
+              <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #EDE0E0', borderRadius: 8, overflow: 'hidden' }}>
+                <span style={{ padding: '10px 12px', background: '#F1F5F9', fontSize: 16, borderRight: '1px solid #EDE0E0' }}>🎬</span>
+                <input value={(form as any).video_url ?? ''} onChange={e => setForm(p => ({ ...p, video_url: e.target.value }))} style={{ ...inp, border: 'none', borderRadius: 0 }} placeholder="https://www.instagram.com/p/xxxxx/" />
+              </div>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Instagramの投稿URLを貼り付けてください
               </div>
             </div>
           </div>

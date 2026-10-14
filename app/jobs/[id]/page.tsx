@@ -85,7 +85,7 @@ export default function JobDetailPage() {
   }
 
   const fetchJob = async () => {
-    const { data, error } = await supabase.from('jobs').select(`*, facilities (id, facility_name, address, phone, description, features, staff_count, established_year, instagram_url), hire_flow`).eq('id', id).single()
+    const { data, error } = await supabase.from('jobs').select(`*, facilities (id, facility_name, address, phone, description, features, staff_count, established_year, instagram_url, video_url), hire_flow`).eq('id', id).single()
     if (!error && data) setJob(data)
     setLoading(false)
   }
@@ -379,6 +379,9 @@ export default function JobDetailPage() {
                 ))}
               </div>
             )}
+            {(job.facilities as any)?.video_url && (
+              <VideoThumbnail url={(job.facilities as any).video_url} />
+            )}
             {(job.facilities as any)?.instagram_url && (
               <button onClick={() => window.open((job.facilities as any).instagram_url, '_blank')} style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#64748B', cursor: 'pointer', fontFamily: 'inherit' }}>
                 📸 Instagramを見る
@@ -418,6 +421,36 @@ export default function JobDetailPage() {
       )}
 
       <div style={{ height: '80px' }} />
+    </div>
+  )
+}
+
+function VideoThumbnail({ url }: { url: string }) {
+  const [thumb, setThumb] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/instagram-oembed?url=${encodeURIComponent(url)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.thumbnail_url) setThumb(data.thumbnail_url)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [url])
+
+  if (loading) return <div style={{ height: 140, background: '#F1F5F9', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#94A3B8', marginTop: 10 }}>読み込み中...</div>
+  if (!thumb) return null
+
+  return (
+    <div onClick={() => window.open(url, '_blank')} style={{ marginTop: 10, position: 'relative', cursor: 'pointer', borderRadius: 8, overflow: 'hidden' }}>
+      <img src={thumb} alt="施設特集動画" style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 22, marginLeft: 3 }}>▶</span>
+        </div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Instagramで動画を見る</div>
+      </div>
     </div>
   )
 }
