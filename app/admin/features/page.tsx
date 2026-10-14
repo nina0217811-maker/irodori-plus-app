@@ -24,7 +24,7 @@ export default function AdminFeaturesPage() {
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState<Feature | null>(null)
   const [isNew, setIsNew] = useState(false)
-  const [form, setForm] = useState({ title: '', subtitle: '', content: '', image_url: '', video_url: '', facility_id: '', published: false, line_catch: '', linked_job_ids: [] as string[], linked_regular_job_ids: [] as string[] })
+  const [form, setForm] = useState({ title: '', subtitle: '', content: '', image_url: '', video_url: '', publish_at: '', facility_id: '', published: false, line_catch: '', linked_job_ids: [] as string[], linked_regular_job_ids: [] as string[] })
   const [facilityJobs, setFacilityJobs] = useState<any[]>([])
   const [facilityRegularJobs, setFacilityRegularJobs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
@@ -51,7 +51,7 @@ export default function AdminFeaturesPage() {
 
   const openNew = () => {
     setIsNew(true)
-    setForm({ title: '', subtitle: '', content: '', image_url: '', video_url: '', facility_id: facilities[0]?.id ?? '', published: false, line_catch: '', linked_job_ids: [], linked_regular_job_ids: [] })
+    setForm({ title: '', subtitle: '', content: '', image_url: '', video_url: '', publish_at: '', facility_id: facilities[0]?.id ?? '', published: false, line_catch: '', linked_job_ids: [], linked_regular_job_ids: [] })
     setEditModal({} as Feature)
   }
 
@@ -68,7 +68,7 @@ export default function AdminFeaturesPage() {
 
   const openEdit = (f: Feature) => {
     setIsNew(false)
-    setForm({ title: f.title, subtitle: f.subtitle ?? '', content: f.content ?? '', image_url: f.image_url ?? '', video_url: (f as any).video_url ?? '', facility_id: f.facility_id, published: f.published, line_catch: (f as any).line_catch ?? '', linked_job_ids: (f as any).linked_job_ids ?? [], linked_regular_job_ids: (f as any).linked_regular_job_ids ?? [] })
+    setForm({ title: f.title, subtitle: f.subtitle ?? '', content: f.content ?? '', image_url: f.image_url ?? '', video_url: (f as any).video_url ?? '', publish_at: (f as any).publish_at ? new Date((f as any).publish_at).toISOString().slice(0,16) : '', facility_id: f.facility_id, published: f.published, line_catch: (f as any).line_catch ?? '', linked_job_ids: (f as any).linked_job_ids ?? [], linked_regular_job_ids: (f as any).linked_regular_job_ids ?? [] })
     setEditModal(f)
   }
 
@@ -183,6 +183,12 @@ https://irodori0305.jp/features/${f.id}`,
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>施設特集動画URL（Instagram投稿URL）</label>
               <input value={(form as any).video_url ?? ''} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #EDE0E0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' }} placeholder='https://www.instagram.com/p/xxxxx/' />
               <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Instagramの投稿URLを入力してください</div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 6 }}>予約投稿日時（空白の場合は即時公開）</label>
+              <input type='datetime-local' value={(form as any).publish_at ?? ''} onChange={e => setForm(f => ({ ...f, publish_at: e.target.value }))} style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #EDE0E0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>設定した日時に自動で公開されます</div>
             </div>
 
             <div style={{ marginBottom: 24 }}>
