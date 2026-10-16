@@ -88,10 +88,16 @@ export default function AdminFeaturesPage() {
 
   const save = async () => {
     setSaving(true)
+    const payload = { ...form } as any
+    if (payload.publish_at) {
+      const jst = new Date(payload.publish_at)
+      jst.setHours(jst.getHours() - 9)
+      payload.publish_at = jst.toISOString()
+    }
     if (isNew) {
-      await supabase.from('features').insert({ ...form })
+      await supabase.from('features').insert(payload)
     } else {
-      await supabase.from('features').update({ ...form }).eq('id', editModal!.id)
+      await supabase.from('features').update(payload).eq('id', editModal!.id)
     }
     setSaving(false)
     setEditModal(null)
