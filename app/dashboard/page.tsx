@@ -158,6 +158,32 @@ export default function DashboardPage() {
     fetchData()
   }
 
+  const handleRenotifyRegular = async (job: RegularJob) => {
+    setRenotifying(job.id)
+    await fetch('/api/line-notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `【再募集】${facilityName}が看護師を募集中です！\n💼 ${job.title}\n📋 ${job.employment_type}\n💰 ${job.salary_type} ¥${job.salary_amount?.toLocaleString()}\n📍 ${job.location}\n\n詳しく見る👇\nhttps://irodori0305.jp/regular-jobs/${job.id}`
+      })
+    })
+    setRenotifying(null)
+    alert('再募集通知を送りました！')
+  }
+
+  const handleRenotifyRegular = async (job: RegularJob) => {
+    setRenotifying(job.id)
+    await fetch('/api/line-notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `【再募集】${facilityName}が看護師を募集中です！\n💼 ${job.title}\n📋 ${job.employment_type}\n💰 ${job.salary_type} ¥${job.salary_amount?.toLocaleString()}\n📍 ${job.location}\n\n詳しく見る👇\nhttps://irodori0305.jp/regular-jobs/${job.id}`
+      })
+    })
+    setRenotifying(null)
+    alert('再募集通知を送りました！')
+  }
+
   const handleDeleteRegularJob = async (jobId: string) => {
     if (!confirm('この求人を削除しますか？')) return
     await supabase.from('regular_jobs').delete().eq('id', jobId)
@@ -884,6 +910,12 @@ export default function DashboardPage() {
               </div>
               <span style={job.status === 'open' ? S.badge('#D1FAE5', '#065F46') : S.badge('#F1F5F9', '#64748B')}>{job.status === 'open' ? '掲載中' : '終了'}</span>
               <button onClick={() => router.push(`/post-regular-job?edit=${job.id}`)} style={S.btn('#EFF6FF', '#93C5FD', '#1D4ED8')}>編集</button>
+              {job.status === 'open' && (
+                <button onClick={() => handleRenotifyRegular(job)} disabled={renotifying === job.id} style={S.btn('#FFF7ED', '#FED7AA', '#C2410C')}>{renotifying === job.id ? '送信中...' : '再募集通知'}</button>
+              )}
+              {job.status === 'open' && (
+                <button onClick={() => handleRenotifyRegular(job)} disabled={renotifying === job.id} style={S.btn('#FFF7ED', '#FED7AA', '#C2410C')}>{renotifying === job.id ? '送信中...' : '再募集通知'}</button>
+              )}
               <button onClick={() => handleDeleteRegularJob(job.id)} style={S.btn('#fff', '#FCA5A5', '#DC2626')}>削除</button>
             </div>
           ))}
